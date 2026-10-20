@@ -1,0 +1,29 @@
+[
+    {
+        "id": 1,
+        "name": "Ноутбук Lenovo",
+        "article": "NB-001",
+        "category": "Электроника",
+        "unit": "шт.",
+        "price": 75000.5,
+        "stock": 15
+    },
+    {
+        "id": 2,
+        "name": "Монитор Samsung",
+        "article": "MN-002",
+        "category": "Электроника",
+        "unit": "шт.",
+        "price": 25000.0,
+        "stock": 8
+    },
+    {
+        "id": 3,
+        "name": "Клавиатура Logitech",
+        "article": "KB-003",
+        "category": "Периферия",
+        "unit": "шт.",
+        "price": 3500.0,
+        "stock": 25
+    }
+]

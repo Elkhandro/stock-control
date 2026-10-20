@@ -1,157 +1,222 @@
-from datetime import datetime, date
+"""Точка входа приложения «Учёт остатков товаров на складе» (уровень ПР2).
 
-# Простые типы данных для начального состояния склада
-warehouse_name = "Центральный склад"
-products = {
-    "Ноутбук Lenovo": {"article": "NB-001", "stock": 15, "price": 75000.50},
-    "Монитор Samsung": {"article": "MN-002", "stock": 8, "price": 25000.00},
-    "Клавиатура Logitech": {"article": "KB-003", "stock": 25, "price": 3500.00}
-}
+Данные представлены словарями и списками, поведение — функциями.
+Классы и объекты на этом этапе не используются (вводятся в ПР3).
+"""
 
-# Функция 1: Проверка наличия товара
-def check_availability(product_name, quantity=1):
-    """
-    Проверяет, достаточно ли товара на складе
-    """
-    if product_name in products:
-        if products[product_name]["stock"] >= quantity:
-            return True, "Товар доступен"
-        return False, f"Недостаточно товара. Остаток: {products[product_name]['stock']} шт."
-    return False, "Товар не найден на складе"
+from typing import Dict, List
 
-# Функция 2: Приемка товара (приход)
-def receive_product(product_name, quantity):
-    """
-    Увеличивает остаток товара на складе
-    """
-    if product_name not in products:
-        return False, "Товар не найден на складе"
-    
-    if quantity <= 0:
-        return False, "Количество должно быть положительным числом"
-    
-    products[product_name]["stock"] += quantity
-    return True, f"Принято: +{quantity} шт. Новый остаток: {products[product_name]['stock']} шт."
+from products import (
+    add_product,
+    check_availability,
+    filter_low_stock,
+    find_product,
+    generate_warehouse_report,
+    get_product_info,
+    show_products,
+    sort_products_by_stock,
+)
+from operations import (
+    ISSUE,
+    RECEIPT,
+    cancel_operation,
+    create_operation,
+    show_operations,
+)
+from storage import load_operations, load_products, save_operations, save_products
+from utils import input_date, input_float, input_int, input_nonempty_str
 
-# Функция 3: Отгрузка товара (расход)
-def ship_product(product_name, quantity):
-    """
-    Уменьшает остаток товара при отгрузке
-    """
-    available, message = check_availability(product_name, quantity)
-    
-    if not available:
-        return False, message
-    
-    products[product_name]["stock"] -= quantity
-    return True, f"Отгружено: -{quantity} шт. Новый остаток: {products[product_name]['stock']} шт."
+WAREHOUSE_NAME = "Центральный склад"
+PRODUCTS_FILE = "data/products.json"
+OPERATIONS_FILE = "data/operations.json"
 
-# Функция 4: Получение информации о товаре
-def get_product_info(product_name):
-    """
-    Возвращает полную информацию о товаре
-    """
-    if product_name in products:
-        product = products[product_name]
-        total_value = product["stock"] * product["price"]
-        return {
-            "name": product_name,
-            "article": product["article"],
-            "stock": product["stock"],
-            "price": product["price"],
-            "total_value": total_value,
-            "status": check_availability(product_name)[1]
-        }
-    return None
 
-# Функция 5: Генерация отчета по складу
-def generate_warehouse_report():
-    """
-    Создает отчет по всем товарам на складе
-    """
-    report = []
-    total_warehouse_value = 0
-    low_stock_items = []
-    
-    for product_name, data in products.items():
-        total_value = data["stock"] * data["price"]
-        total_warehouse_value += total_value
-        status = check_availability(product_name)
-        
-        report.append({
-            "name": product_name,
-            "article": data["article"],
-            "stock": data["stock"],
-            "price": data["price"],
-            "total_value": total_value,
-            "status": status[1]
-        })
-        
-        # Товары с низким остатком (меньше 10 штук)
-        if data["stock"] < 10:
-            low_stock_items.append(product_name)
-    
-    return {
-        "warehouse": warehouse_name,
-        "report_date": date.today(),
-        "items": report,
-        "total_value": total_warehouse_value,
-        "low_stock_items": low_stock_items
-    }
+def scenario_show_products(products: Dict[int, dict]) -> None:
+    """Вывести список всех товаров."""
+    show_products(products)
 
-# Демонстрация работы функций
-def main():
-    print("=== Система учёта остатков товаров ===")
-    print(f"Склад: {warehouse_name}")
-    print(f"Дата: {date.today()}\n")
-    
-    # Демонстрация проверки наличия
-    print("--- Проверка наличия товара ---")
-    status, message = check_availability("Ноутбук Lenovo", 5)
-    print(f"Ноутбук Lenovo (5 шт.): {message}")
-    
-    status, message = check_availability("Монитор Samsung", 100)
-    print(f"Монитор Samsung (100 шт.): {message}")
-    
-    # Демонстрация приемки товара
-    print("\n--- Приемка товара ---")
-    success, message = receive_product("Клавиатура Logitech", 10)
-    print(f"Клавиатура Logitech: {message}")
-    
-    success, message = receive_product("Неизвестный товар", 5)
-    print(f"Неизвестный товар: {message}")
-    
-    # Демонстрация отгрузки товара
-    print("\n--- Отгрузка товара ---")
-    success, message = ship_product("Ноутбук Lenovo", 3)
-    print(f"Ноутбук Lenovo: {message}")
-    
-    success, message = ship_product("Монитор Samsung", 50)
-    print(f"Монитор Samsung: {message}")
-    
-    # Демонстрация получения информации о товаре
-    print("\n--- Информация о товаре ---")
-    product_info = get_product_info("Ноутбук Lenovo")
-    if product_info:
-        print(f"Название: {product_info['name']}")
-        print(f"Артикул: {product_info['article']}")
-        print(f"Остаток: {product_info['stock']} шт.")
-        print(f"Цена: {product_info['price']} руб.")
-        print(f"Общая стоимость: {product_info['total_value']:.2f} руб.")
-        print(f"Статус: {product_info['status']}")
-    
-    # Демонстрация генерации отчета
-    print("\n--- Отчет по складу ---")
-    report = generate_warehouse_report()
+
+def scenario_find_product(products: Dict[int, dict]) -> None:
+    """Найти товары по названию или артикулу."""
+    query = input_nonempty_str("Введите название или артикул: ")
+    found = find_product(products, query)
+    if found:
+        for product in found:
+            print(f"[{product['id']}] {product['name']} — {product['stock']} {product['unit']}")
+    else:
+        print("Ничего не найдено.")
+
+
+def scenario_low_stock(products: Dict[int, dict]) -> None:
+    """Показать товары с остатком ниже порога."""
+    threshold = input_int("Порог остатка (шт.): ")
+    low_stock = filter_low_stock(products, threshold)
+    if low_stock:
+        for product in low_stock:
+            print(f"[{product['id']}] {product['name']}: {product['stock']} {product['unit']}")
+    else:
+        print("Товаров с низким остатком нет.")
+
+
+def scenario_sort_products(products: Dict[int, dict]) -> None:
+    """Показать товары, отсортированные по остатку."""
+    for product in sort_products_by_stock(products):
+        print(f"[{product['id']}] {product['name']}: {product['stock']} {product['unit']}")
+
+
+def scenario_add_product(products: Dict[int, dict]) -> None:
+    """Создать новый товар и добавить его в коллекцию."""
+    name = input_nonempty_str("Название товара: ")
+    article = input_nonempty_str("Артикул: ")
+    category = input_nonempty_str("Категория: ")
+    unit = input_nonempty_str("Единица измерения (шт., кг и т.п.): ")
+    price = input_float("Цена за единицу: ")
+    product_id = add_product(products, name, article, category, unit, price)
+    print(f"Товар добавлен с id {product_id}.")
+
+
+def scenario_product_info(products: Dict[int, dict]) -> None:
+    """Показать подробную информацию о товаре."""
+    product_id = input_int("ID товара: ")
+    info = get_product_info(products, product_id)
+    if info is None:
+        print("Товар с таким ID не найден.")
+        return
+    print(f"Название: {info['name']}")
+    print(f"Артикул: {info['article']}")
+    print(f"Остаток: {info['stock']} шт.")
+    print(f"Цена: {info['price']:.2f} руб.")
+    print(f"Общая стоимость: {info['total_value']:.2f} руб.")
+    print(f"Статус: {info['status']}")
+
+
+def scenario_check_availability(products: Dict[int, dict]) -> None:
+    """Проверить, доступно ли нужное количество товара."""
+    product_id = input_int("ID товара: ")
+    quantity = input_int("Требуемое количество: ")
+    _, message = check_availability(products, product_id, quantity)
+    print(message)
+
+
+def scenario_new_operation(
+    operations: List[dict], products: Dict[int, dict], operation_type: str
+) -> None:
+    """Создать операцию прихода или расхода товара."""
+    action = "Приход" if operation_type == RECEIPT else "Расход"
+    product_id = input_int(f"{action}: ID товара: ")
+
+    if product_id not in products:
+        print("Товар с таким ID не найден.")
+        return
+
+    quantity = input_int(f"Количество ({products[product_id]['unit']}): ")
+    operation_date = input_date("Дата операции (ДД.ММ.ГГГГ): ")
+    comment = input("Комментарий (необязательно): ")
+
+    operation = create_operation(
+        operations, products, product_id, operation_type, quantity, operation_date, comment
+    )
+
+    if operation is None:
+        print("Операция не выполнена: некорректное количество или недостаточно товара.")
+        return
+
+    print(f"Операция №{operation['id']} создана.")
+    print(f"Текущий остаток «{products[product_id]['name']}»: "
+          f"{products[product_id]['stock']} {products[product_id]['unit']}")
+
+
+def scenario_cancel_operation(operations: List[dict], products: Dict[int, dict]) -> None:
+    """Отменить ранее созданную операцию."""
+    operation_id = input_int("ID операции для отмены: ")
+    if cancel_operation(operations, products, operation_id):
+        print("Операция отменена, остаток товара восстановлен.")
+    else:
+        print("Операция не найдена, уже отменена или товар отсутствует.")
+
+
+def scenario_show_operations(operations: List[dict]) -> None:
+    """Показать историю всех операций."""
+    show_operations(operations)
+
+
+def scenario_report(products: Dict[int, dict]) -> None:
+    """Сформировать и вывести отчёт по складу."""
+    report = generate_warehouse_report(products, WAREHOUSE_NAME)
     print(f"Склад: {report['warehouse']}")
-    print(f"Дата отчета: {report['report_date']}")
-    print(f"Общая стоимость товаров: {report['total_value']:.2f} руб.")
-    print("\nТовары:")
-    for item in report['items']:
-        print(f"  {item['name']} (арт. {item['article']}): {item['stock']} шт. - {item['total_value']:.2f} руб.")
-    
-    if report['low_stock_items']:
-        print(f"\nВнимание! Товары с низким остатком: {', '.join(report['low_stock_items'])}")
+    print(f"Товаров на складе: {report['products_count']}")
+    print(f"Общая стоимость остатков: {report['total_value']:.2f} руб.")
+    if report["low_stock_items"]:
+        print("Товары с низким остатком: " + ", ".join(report["low_stock_items"]))
+    else:
+        print("Товаров с низким остатком нет.")
+
+
+MENU_TEXT = """
+=== Учёт остатков товаров на складе ===
+1. Показать все товары
+2. Найти товар (по названию/артикулу)
+3. Товары с низким остатком
+4. Отсортировать товары по остатку
+5. Добавить новый товар
+6. Информация о товаре
+7. Проверить доступность количества
+8. Приход товара
+9. Расход товара
+10. Отменить операцию
+11. История операций
+12. Отчёт по складу
+0. Выход
+"""
+
+
+def main() -> None:
+    """Точка запуска приложения: загрузка данных, меню, сохранение данных."""
+    products = load_products(PRODUCTS_FILE)
+    operations = load_operations(OPERATIONS_FILE)
+
+    while True:
+        print(MENU_TEXT)
+        choice = input("Выберите действие: ").strip()
+
+        try:
+            if choice == "1":
+                scenario_show_products(products)
+            elif choice == "2":
+                scenario_find_product(products)
+            elif choice == "3":
+                scenario_low_stock(products)
+            elif choice == "4":
+                scenario_sort_products(products)
+            elif choice == "5":
+                scenario_add_product(products)
+            elif choice == "6":
+                scenario_product_info(products)
+            elif choice == "7":
+                scenario_check_availability(products)
+            elif choice == "8":
+                scenario_new_operation(operations, products, RECEIPT)
+            elif choice == "9":
+                scenario_new_operation(operations, products, ISSUE)
+            elif choice == "10":
+                scenario_cancel_operation(operations, products)
+            elif choice == "11":
+                scenario_show_operations(operations)
+            elif choice == "12":
+                scenario_report(products)
+            elif choice == "0":
+                save_products(PRODUCTS_FILE, products)
+                save_operations(OPERATIONS_FILE, operations)
+                print("Данные сохранены. До свидания!")
+                break
+            else:
+                print("Неизвестный пункт меню, попробуйте снова.")
+        except KeyError as error:
+            # Защита от обращения к отсутствующим ключам данных.
+            print(f"Ошибка данных: не найден ключ {error}.")
+        except ValueError as error:
+            print(f"Ошибка ввода данных: {error}")
+
 
 if __name__ == "__main__":
     main()

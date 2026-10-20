@@ -1,0 +1,11 @@
+[
+    {
+        "id": 1,
+        "product_id": 3,
+        "operation_type": "приход",
+        "quantity": 10,
+        "operation_date": "15.09.2026",
+        "comment": "Плановая поставка",
+        "is_cancelled": false
+    }
+]
