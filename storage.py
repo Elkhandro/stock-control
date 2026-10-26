@@ -1,43 +1,89 @@
-"""Загрузка и сохранение данных приложения в формате JSON."""
+"""Загрузка и сохранение данных приложения в формате JSON.
+
+Все преобразования между JSON и объектами выполняются только в этом модуле.
+"""
 
 import json
-from typing import Dict, List
+from typing import List
+
+from models.product import Product
+from models.operation import StockOperation
 
 
-def load_products(filename: str) -> Dict[int, dict]:
-    """Загрузить товары из JSON-файла в словарь products: dict[int, dict]."""
+def load_products(filename: str) -> list[Product]:
+    """Загрузить товары из JSON-файла в список объектов Product.
+
+    Args:
+        filename: Путь к JSON-файлу.
+
+    Returns:
+        Список объектов Product.
+    """
     try:
         with open(filename, "r", encoding="utf-8") as file:
             data = json.load(file)
     except FileNotFoundError:
-        return {}
+        return []
     except json.JSONDecodeError:
         print(f"Ошибка чтения файла {filename}: некорректный JSON")
-        return {}
+        return []
 
-    return {item["id"]: item for item in data}
+    return [Product.from_dict(item) for item in data]
 
 
-def save_products(filename: str, products: Dict[int, dict]) -> None:
-    """Сохранить словарь products в JSON-файл в виде списка."""
-    data = list(products.values())
+def save_products(filename: str, products: list[Product]) -> None:
+    """Сохранить список объектов Product в JSON-файл.
+
+    Args:
+        filename: Путь к JSON-файлу.
+        products: Список объектов Product.
+    """
+    data = [product.to_dict() for product in products]
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
-def load_operations(filename: str) -> List[dict]:
-    """Загрузить список складских операций из JSON-файла."""
+def load_operations(
+    filename: str, products_by_id: dict[int, Product]
+) -> list[StockOperation]:
+    """Загрузить складские операции из JSON-файла в список объектов StockOperation.
+
+    При загрузке операции связываются с объектами Product по product_id.
+
+    Args:
+        filename: Путь к JSON-файлу.
+        products_by_id: Словарь объектов Product по их id для связывания.
+
+    Returns:
+        Список объектов StockOperation.
+    """
     try:
         with open(filename, "r", encoding="utf-8") as file:
-            return json.load(file)
+            data = json.load(file)
     except FileNotFoundError:
         return []
     except json.JSONDecodeError:
         print(f"Ошибка чтения файла {filename}: некорректный JSON")
         return []
 
+    operations = []
+    for item in data:
+        try:
+            operation = StockOperation.from_dict(item, products_by_id)
+            operations.append(operation)
+        except ValueError as e:
+            print(f"Пропуск операции: {e}")
 
-def save_operations(filename: str, operations: List[dict]) -> None:
-    """Сохранить список складских операций в JSON-файл."""
+    return operations
+
+
+def save_operations(filename: str, operations: list[StockOperation]) -> None:
+    """Сохранить список объектов StockOperation в JSON-файл.
+
+    Args:
+        filename: Путь к JSON-файлу.
+        operations: Список объектов StockOperation.
+    """
+    data = [operation.to_dict() for operation in operations]
     with open(filename, "w", encoding="utf-8") as file:
-        json.dump(operations, file, ensure_ascii=False, indent=4)
+        json.dump(data, file, ensure_ascii=False, indent=4)

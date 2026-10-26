@@ -23,17 +23,56 @@
 движения (приход/расход) и формирования отчётности по текущему состоянию
 склада.
 
-## Основные сущности
+## Основные сущности (ООП-модель, ПР3)
 
-- **Товар** — наименование, артикул, категория, единица измерения, цена,
-  текущий остаток.
-- **Складская операция** — приход или расход, количество, дата,
-  комментарий, признак отмены.
+### Класс `Product` (Товар)
 
-На этом этапе (ПР2) сущности не выделены в классы: товар представлен
-словарём, коллекция товаров — словарём `dict[int, dict]` (ключ —
-идентификатор товара), коллекция операций — списком словарей
-`list[dict]`. Переход к объектной модели выполняется на ПР3.
+**Атрибуты:**
+
+- `id: int` — уникальный идентификатор товара.
+- `name: str` — наименование товара.
+- `article: str` — артикул товара.
+- `category: str` — категория товара.
+- `unit: str` — единица измерения (шт., кг и т.п.).
+- `price: float` — цена за единицу товара.
+- `stock: int` — текущий остаток на складе.
+
+**Методы:**
+
+- `__str__()` — строковое представление товара для вывода.
+- `check_availability(quantity: int)` — проверить доступность товара.
+- `receive(quantity: int)` — принять товар на склад (увеличить остаток).
+- `ship(quantity: int)` — отгрузить товар со склада (уменьшить остаток).
+- `get_total_value()` — рассчитать общую стоимость остатков.
+- `get_info()` — вернуть подробную информацию о товаре.
+- `to_dict()` — преобразовать в словарь для сохранения в JSON.
+- `from_dict(data: dict)` — создать объект из словаря (classmethod).
+
+### Класс `StockOperation` (Складская операция)
+
+**Атрибуты:**
+
+- `id: int` — уникальный идентификатор операции.
+- `product: Product` — объект товара, к которому относится операция.
+- `operation_type: str` — тип операции ("приход" или "расход").
+- `quantity: int` — количество товара в операции.
+- `operation_date: date` — дата проведения операции.
+- `comment: str` — комментарий к операции (необязательно).
+- `is_cancelled: bool` — флаг отмены операции.
+
+**Методы:**
+
+- `__str__()` — строковое представление операции.
+- `cancel()` — отменить операцию и восстановить остаток товара.
+- `get_status()` — вернуть текстовый статус операции.
+- `to_dict()` — преобразовать в словарь для сохранения в JSON.
+- `from_dict(data, products_by_id)` — создать объект из словаря (classmethod).
+
+## Взаимодействие классов
+
+- `StockOperation.product` хранит **ссылку на объект** `Product`, а не `product_id`.
+- При загрузке из JSON `storage.py` находит объект `Product` по `product_id` и связывает его с операцией.
+- Метод `cancel()` у операции обращается к `product.receive()` / `product.ship()` для восстановления остатка.
 
 ## Возможности
 
@@ -51,7 +90,6 @@
 
 ## Структура проекта
 
-```text
 stock-control/
 │
 ├── README.md
@@ -59,57 +97,77 @@ stock-control/
 ├── setup.cfg
 ├── .gitignore
 ├── main.py
-├── products.py
-├── operations.py
 ├── storage.py
 ├── utils.py
 │
+├── models/
+│ ├── init.py
+│ ├── product.py
+│ └── operation.py
+│
+├── services/
+│ ├── init.py
+│ ├── product_service.py
+│ └── operation_service.py
+│
 ├── data/
-│   ├── products.json
-│   └── operations.json
+│ ├── products.json
+│ └── operations.json
 │
 └── tests/
-    ├── test_products.py
-    └── test_operations.py
-```
+├── test_product.py
+└── test_operation.py
 
 ## Назначение модулей
 
 ### `main.py`
+
 Точка запуска программы: отображение меню, получение данных от
 пользователя, вызов функций проекта, обработка исключений на уровне
-пользовательского сценария.
+пользовательского сценария. Работает с коллекциями объектов
+`list[Product]` и `list[StockOperation]`.
 
-### `products.py`
-Функции для работы с коллекцией товаров: `add_product()`,
-`find_product()`, `find_product_by_id()`, `check_availability()`,
-`receive_product()`, `ship_product()`, `get_product_info()`,
-`filter_low_stock()`, `sort_products_by_stock()`, `show_products()`,
-`generate_warehouse_report()`.
+### `models/`
 
-### `operations.py`
-Функции для работы со складскими операциями: `create_operation()`,
-`cancel_operation()`, `find_operations_by_product()`,
-`get_operation_status()`, `show_operations()`.
+Пакет с классами предметной области.
+
+- **`product.py`** — класс `Product` с методами изменения и проверки остатка.
+- **`operation.py`** — класс `StockOperation` с методом отмены операции.
+
+### `services/`
+
+Пакет с функциями работы с коллекциями объектов.
+
+- **`product_service.py`** — функции `add_product()`, `find_product()`,
+  `find_product_by_id()`, `filter_low_stock()`, `sort_products_by_stock()`,
+  `generate_warehouse_report()`. Работают с `list[Product]`.
+- **`operation_service.py`** — функции `create_operation()`,
+  `cancel_operation()`, `find_operations_by_product()`.
+  Работают с `list[StockOperation]`.
 
 ### `storage.py`
+
 Загрузка и сохранение данных: чтение и запись JSON-файлов через
 контекстный менеджер `with`, обработка отсутствия файла и
-некорректного JSON.
+некорректного JSON. Преобразование между словарями и объектами
+выполняется **только** в этом модуле.
 
 ### `utils.py`
+
 Вспомогательные функции безопасного ввода: `input_int()`,
 `input_float()`, `input_date()`, `input_nonempty_str()` — при
 некорректном вводе запрос повторяется.
 
 ### `tests/`
-Автоматизированные тесты функций `products.py` и `operations.py`.
+
+Автоматизированные тесты классов `Product`, `StockOperation`
+и сервисных функций.
 
 ## Формат хранения данных
 
-Товары (`data/products.json`) — список словарей:
+Формат JSON сохранён из ПР2. Товары (`data/products.json`) — список словарей:
 
-```json
+````json
 [
     {
         "id": 1,
@@ -121,30 +179,12 @@ stock-control/
         "stock": 15
     }
 ]
-```
-
-Операции (`data/operations.json`) — список словарей, товар указывается
-идентификатором `product_id`:
-
-```json
-[
-    {
-        "id": 1,
-        "product_id": 1,
-        "operation_type": "приход",
-        "quantity": 10,
-        "operation_date": "15.09.2026",
-        "comment": "Плановая поставка",
-        "is_cancelled": false
-    }
-]
-```
 
 ## Установка зависимостей
 
 ```text
 pip install -r requirements.txt
-```
+````
 
 ## Запуск программы
 
