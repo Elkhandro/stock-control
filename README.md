@@ -195,7 +195,7 @@ python main.py
 ## Запуск тестов
 
 ```text
-pytest -v
+python -m pytest -v
 ```
 
 ## Проверка качества кода
