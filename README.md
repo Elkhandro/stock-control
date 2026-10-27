@@ -1,7 +1,13 @@
 # stock-control / Складской учёт
 
-Консольное приложение для учёта остатков товаров на складе:
-фиксация приёмки и отгрузки, контроль остатков, поиск и отчётность.
+Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
+
+## Текущее состояние (PR5)
+
+- ✅ Консольная версия (ПР3, ООП) — полностью рабочая
+- ✅ Django 5.2 веб-интерфейс — базовые страницы чтения
+- ✅ Данные хранятся в JSON (ORM не используется)
+- ✅ Классы `models/`, `storage.py`, тесты — сохранены и используются в вебе
 
 ## Назначение
 
@@ -91,32 +97,37 @@
 ## Структура проекта
 
 stock-control/
-│
-├── README.md
-├── requirements.txt
-├── setup.cfg
-├── .gitignore
-├── main.py
-├── storage.py
-├── utils.py
-│
-├── models/
-│ ├── init.py
+├── manage.py # Django management
+├── stockcontrol/ # Django project settings
+│ ├── settings.py
+│ ├── urls.py
+│ └── wsgi.py
+├── homepage/ # Главная страница + 404
+│ ├── views.py
+│ └── urls.py
+├── products/ # Страницы товаров
+│ ├── views.py
+│ └── urls.py
+├── operations/ # Страницы складских операций
+│ ├── views.py
+│ └── urls.py
+├── models/ # ООП-классы (ПР3)
 │ ├── product.py
 │ └── operation.py
-│
-├── services/
-│ ├── init.py
+├── services/ # Сервисные функции (ПР3)
 │ ├── product_service.py
 │ └── operation_service.py
-│
+├── storage.py # JSON ↔ объекты
+├── utils.py # Консольный ввод
+├── main.py # Консольная точка входа
 ├── data/
 │ ├── products.json
 │ └── operations.json
-│
-└── tests/
-├── test_product.py
-└── test_operation.py
+├── tests/ # Тесты ПР3
+│ ├── test_product.py
+│ └── test_operation.py
+├── requirements.txt
+└── README.md
 
 ## Назначение модулей
 
@@ -152,16 +163,16 @@ stock-control/
 некорректного JSON. Преобразование между словарями и объектами
 выполняется **только** в этом модуле.
 
-### `utils.py`
+## Веб-страницы и URL
 
-Вспомогательные функции безопасного ввода: `input_int()`,
-`input_float()`, `input_date()`, `input_nonempty_str()` — при
-некорректном вводе запрос повторяется.
-
-### `tests/`
-
-Автоматизированные тесты классов `Product`, `StockOperation`
-и сервисных функций.
+| URL                 | View-функция                        | Описание                                      |
+| ------------------- | ----------------------------------- | --------------------------------------------- |
+| `/`                 | `homepage.views.index`              | Главная: статистика, товары с низким остатком |
+| `/products/`        | `products.views.product_list`       | Список всех товаров                           |
+| `/products/<id>/`   | `products.views.product_detail`     | Карточка товара                               |
+| `/operations/`      | `operations.views.operation_list`   | История операций                              |
+| `/operations/<id>/` | `operations.views.operation_detail` | Детали операции                               |
+| Любой другой        | `homepage.views.page_not_found`     | Кастомная 404                                 |
 
 ## Формат хранения данных
 
@@ -204,6 +215,13 @@ python -m pytest -v
 flake8 .
 ```
 
+## Запуск Веб-версия
+
+python manage.py migrate
+python manage.py runserver
+
+# Открыть http://127.0.0.1:8000/
+
 ## Git
 
 Для проверки состояния репозитория:
@@ -214,9 +232,6 @@ git status
 
 ## План развития
 
-- ПР3 — переход к объектно-ориентированной модели: классы `Product` и
-  `StockOperation`, методы вместо части функций;
-- разработка веб-приложения на Django;
 - подключение базы данных;
 - реализация пользователей;
 - разработка API;

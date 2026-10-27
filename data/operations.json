@@ -1,20 +1,38 @@
 [
-  {
-    "id": 1,
-    "product_id": 1,
-    "operation_type": "приход",
-    "quantity": 10,
-    "operation_date": "15.09.2026",
-    "comment": "Плановая поставка",
-    "is_cancelled": false
-  },
-  {
-    "id": 2,
-    "product_id": 2,
-    "operation_type": "расход",
-    "quantity": 2,
-    "operation_date": "16.09.2026",
-    "comment": "Отгрузка клиенту",
-    "is_cancelled": false
-  }
+    {
+        "id": 1,
+        "product_id": 1,
+        "operation_type": "приход",
+        "quantity": 10,
+        "operation_date": "15.09.2026",
+        "comment": "Плановая поставка",
+        "is_cancelled": true
+    },
+    {
+        "id": 2,
+        "product_id": 2,
+        "operation_type": "расход",
+        "quantity": 2,
+        "operation_date": "16.09.2026",
+        "comment": "Отгрузка клиенту",
+        "is_cancelled": false
+    },
+    {
+        "id": 3,
+        "product_id": 1,
+        "operation_type": "приход",
+        "quantity": 100,
+        "operation_date": "12.12.2026",
+        "comment": "",
+        "is_cancelled": false
+    },
+    {
+        "id": 4,
+        "product_id": 1,
+        "operation_type": "расход",
+        "quantity": 12,
+        "operation_date": "13.12.2026",
+        "comment": "",
+        "is_cancelled": false
+    }
 ]

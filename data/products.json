@@ -16,5 +16,32 @@
     "unit": "шт.",
     "price": 25000.0,
     "stock": 8
+  },
+  {
+    "id": 3,
+    "name": "Клавиатура Logitech",
+    "article": "KB-003",
+    "category": "Периферия",
+    "unit": "шт.",
+    "price": 3500.0,
+    "stock": 42
+  },
+  {
+    "id": 4,
+    "name": "Мышь беспроводная Defender",
+    "article": "MS-004",
+    "category": "Периферия",
+    "unit": "шт.",
+    "price": 1200.0,
+    "stock": 5
+  },
+  {
+    "id": 5,
+    "name": "Кабель HDMI 2м",
+    "article": "CB-005",
+    "category": "Аксессуары",
+    "unit": "шт.",
+    "price": 450.0,
+    "stock": 120
   }
 ]
