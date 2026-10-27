@@ -3,16 +3,8 @@
 from django.http import HttpResponse
 
 
-def page(title: str, content: str) -> HttpResponse:
-    """Единый HTML-каркас с Bootstrap 5.3 через CDN.
-
-    Args:
-        title: Заголовок страницы (<title> и навигация).
-        content: HTML-содержимое основного блока.
-
-    Returns:
-        HttpResponse с полным HTML-документом.
-    """
+def page(title: str, content: str, status: int = 200) -> HttpResponse:
+    """Единый HTML-каркас с Bootstrap 5.3 через CDN."""
     html = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -41,7 +33,16 @@ def page(title: str, content: str) -> HttpResponse:
                         <a class="nav-link" href="/products/">Товары</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/products/add/">+ Товар</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/operations/">Операции</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/operations/receive/">📥 Приход</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/operations/ship/">📤 Расход</a>
                     </li>
                 </ul>
             </div>
@@ -58,7 +59,7 @@ def page(title: str, content: str) -> HttpResponse:
             crossorigin="anonymous"></script>
 </body>
 </html>"""
-    return HttpResponse(html)
+    return HttpResponse(html, status=status)
 
 
 def index(request) -> HttpResponse:

@@ -1,17 +1,30 @@
 """View-функции приложения operations (складские операции)."""
 
+from datetime import date
+
 from django.http import HttpResponse
+from django.views.decorators.http import require_http_methods
 
 from homepage.views import page
-from storage import load_products, load_operations
-from models.operation import RECEIPT
+from storage import load_products, load_operations, save_operations
+from models.operation import RECEIPT, ISSUE
+from services.operation_service import create_operation
+
+
+OPERATIONS_FILE = "data/operations.json"
+PRODUCTS_FILE = "data/products.json"
 
 
 def _load_all_operations():
     """Загрузить все операции из JSON со связанными товарами."""
-    products_list = load_products("data/products.json")
+    products_list = load_products(PRODUCTS_FILE)
     products_by_id = {p.id: p for p in products_list}
-    return load_operations("data/operations.json", products_by_id)
+    return load_operations(OPERATIONS_FILE, products_by_id)
+
+
+def _load_all_products():
+    """Загрузить все товары."""
+    return load_products(PRODUCTS_FILE)
 
 
 def operation_list(request) -> HttpResponse:
@@ -44,7 +57,13 @@ def operation_list(request) -> HttpResponse:
         """
 
     content = f"""
-    <h1 class="mb-4">📋 История складских операций</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">📋 История складских операций</h1>
+        <div class="d-flex gap-2">
+            <a href="/operations/receive/" class="btn btn-success">📥 Приход</a>
+            <a href="/operations/ship/" class="btn btn-warning">📤 Расход</a>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="table table-striped table-hover align-middle">
             <thead class="table-dark">
@@ -83,9 +102,7 @@ def operation_detail(request, operation_id: int) -> HttpResponse:
             ← Вернуться к списку операций
         </a>
         """
-        return HttpResponse(
-            page("Операция не найдена", content).content, status=404
-        )
+        return page("Операция не найдена", content, status=404)
 
     type_badge = (
         "bg-success" if operation.operation_type == RECEIPT else "bg-warning text-dark"
@@ -139,3 +156,113 @@ def operation_detail(request, operation_id: int) -> HttpResponse:
     <a href="/operations/" class="btn btn-outline-primary">← К списку операций</a>
     """
     return page(f"Операция №{operation.id}", content)
+
+
+@require_http_methods(["GET", "POST"])
+def operation_receive(request) -> HttpResponse:
+    """Страница прихода товара на склад."""
+    return _operation_form(request, RECEIPT)
+
+
+@require_http_methods(["GET", "POST"])
+def operation_ship(request) -> HttpResponse:
+    """Страница расхода товара со склада."""
+    return _operation_form(request, ISSUE)
+
+
+def _operation_form(request, operation_type: str) -> HttpResponse:
+    """Универсальная форма для прихода/расхода."""
+    from storage import save_products
+
+    type_label = "Приход" if operation_type == RECEIPT else "Расход"
+    icon = "📥" if operation_type == RECEIPT else "📤"
+    btn_class = "btn-success" if operation_type == RECEIPT else "btn-warning"
+
+    products_list = _load_all_products()
+    error = ""
+    success = ""
+
+    if request.method == "POST":
+        product_id_str = request.POST.get("product_id", "").strip()
+        quantity_str = request.POST.get("quantity", "").strip()
+        op_date_str = request.POST.get("operation_date", "").strip()
+        comment = request.POST.get("comment", "").strip()
+
+        if not all([product_id_str, quantity_str, op_date_str]):
+            error = "Товар, количество и дата обязательны."
+        else:
+            try:
+                product_id = int(product_id_str)
+                quantity = int(quantity_str)
+                day, month, year = map(int, op_date_str.split("."))
+                op_date = date(year, month, day)
+
+                product = None
+                for p in products_list:
+                    if p.id == product_id:
+                        product = p
+                        break
+
+                if product is None:
+                    error = f"Товар с ID {product_id} не найден."
+                else:
+                    ops = _load_all_operations()
+                    operation = create_operation(
+                        ops, product, operation_type, quantity, op_date, comment
+                    )
+                    if operation is None:
+                        error = (
+                            "Операция не выполнена: некорректное количество "
+                            "или недостаточно товара."
+                        )
+                    else:
+                        save_operations(OPERATIONS_FILE, ops)
+                        save_products(PRODUCTS_FILE, products_list)
+                        success = (
+                            f"{type_label}: {quantity} {product.unit} "
+                            f"«{product.name}». Новый остаток: {product.stock} {product.unit}."
+                        )
+            except ValueError:
+                error = "Некорректный формат данных. Проверьте ввод."
+
+    # Опции селекта товаров
+    options = "".join(
+        f'<option value="{p.id}">{p.id} — {p.name} (остаток: {p.stock} {p.unit})</option>'
+        for p in products_list
+    )
+
+    form_html = f"""
+    <h1 class="mb-4">{icon} {type_label} товара</h1>
+    {"<div class='alert alert-danger'>" + error + "</div>" if error else ""}
+    {"<div class='alert alert-success'>" + success + "</div>" if success else ""}
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label">Товар *</label>
+                    <select name="product_id" class="form-select" required>
+                        <option value="">Выберите товар...</option>
+                        {options}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Количество *</label>
+                    <input type="number" name="quantity" class="form-control"
+                           min="1" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Дата (ДД.ММ.ГГГГ) *</label>
+                    <input type="text" name="operation_date" class="form-control"
+                           placeholder="28.10.2026" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Комментарий</label>
+                    <input type="text" name="comment" class="form-control">
+                </div>
+                <button type="submit" class="btn {btn_class}">{icon} Оформить {type_label.lower()}</button>
+                <a href="/operations/" class="btn btn-outline-secondary ms-2">Отмена</a>
+            </form>
+        </div>
+    </div>
+    """
+    return page(f"{type_label} товара", form_html)
