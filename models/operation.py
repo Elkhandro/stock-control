@@ -82,6 +82,11 @@ class StockOperation:
             f"{action} {self.quantity} {self.product.unit} от "
             f"{self.operation_date.strftime('%d.%m.%Y')} ({state})"
         )
+    
+    @property
+    def display_date(self) -> str:
+        """Вернуть дату в формате ДД.ММ.ГГГГ для отображения в шаблонах."""
+        return self.operation_date.strftime("%d.%m.%Y")
 
     def to_dict(self) -> dict:
         """Преобразовать объект в словарь для сохранения в JSON.

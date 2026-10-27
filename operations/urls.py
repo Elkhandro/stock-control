@@ -4,6 +4,8 @@ from django.urls import path
 
 from . import views
 
+app_name = "operations"
+
 urlpatterns = [
     path("", views.operation_list, name="operation_list"),
     path("receive/", views.operation_receive, name="operation_receive"),

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name|default:"Товар" }} — Складской учёт{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="{% url 'products:product_list' %}">Товары</a>
+        </li>
+        <li class="breadcrumb-item active">{{ product.name|default:"Товар не найден" }}</li>
+    </ol>
+</nav>
+
+{% if product %}
+<div class="card mb-4 product-card">
+    <div class="card-header">
+        <h2 class="mb-0">{{ product.name }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr><th width="40%">ID:</th><td>{{ product.id }}</td></tr>
+                    <tr><th>Артикул:</th><td><code>{{ product.article }}</code></td></tr>
+                    <tr><th>Категория:</th><td>{{ product.category }}</td></tr>
+                    <tr><th>Единица:</th><td>{{ product.unit }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="40%">Остаток:</th>
+                        <td>
+                            {% if product.stock >= 10 %}
+                            <span class="badge bg-success fs-5 stock-status">
+                                {{ product.stock }} {{ product.unit }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger fs-5 stock-status">
+                                {{ product.stock }} {{ product.unit }}
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th>Цена:</th><td>{{ product.price|floatformat:2 }} ₽</td></tr>
+                    <tr><th>Стоимость:</th><td>{{ product.get_total_value|floatformat:2 }} ₽</td></tr>
+                    <tr><th>Статус:</th><td>{{ info.status }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<a href="{% url 'products:product_list' %}" class="btn btn-outline-primary">
+    ← К списку товаров
+</a>
+{% else %}
+<div class="alert alert-danger">
+    ❌ Товар с ID {{ product_id }} не найден.
+</div>
+<a href="{% url 'products:product_list' %}" class="btn btn-outline-primary">
+    ← Вернуться к списку товаров
+</a>
+{% endif %}
+{% endblock %}

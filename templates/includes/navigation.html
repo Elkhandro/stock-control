@@ -1,0 +1,58 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a
+      class="navbar-brand d-flex align-items-center"
+      href="{% url 'homepage:index' %}"
+    >
+      <img
+        src="{% static 'homepage/img/logo_stock.png' %}"
+        alt="Логотип"
+        width="32"
+        height="32"
+        class="me-2"
+      />
+      Складской учёт
+    </a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarNav"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'products:product_list' %}"
+            >Товары</a
+          >
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'products:product_add' %}"
+            >+ Товар</a
+          >
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_list' %}"
+            >Операции</a
+          >
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_receive' %}"
+            >📥 Приход</a
+          >
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_ship' %}"
+            >📤 Расход</a
+          >
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

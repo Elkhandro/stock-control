@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{{ type_label }} товара{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ icon }} {{ type_label }} товара</h1>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Товар *</label>
+                <select name="product_id" class="form-select" required>
+                    <option value="">Выберите товар...</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}">
+                        {{ product.id }} — {{ product.name }} 
+                        (остаток: {{ product.stock }} {{ product.unit }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Количество *</label>
+                <input type="number" name="quantity" class="form-control"
+                       min="1" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Дата (ДД.ММ.ГГГГ) *</label>
+                <input type="text" name="operation_date" class="form-control"
+                       placeholder="28.10.2026" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Комментарий</label>
+                <input type="text" name="comment" class="form-control">
+            </div>
+            <button type="submit" class="btn {{ btn_class }}">
+                {{ icon }} Оформить {{ type_label_lower }}
+            </button>
+            <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-secondary ms-2">
+                Отмена
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

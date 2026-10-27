@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Товары — Складской учёт{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📦 Товары на складе</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <form method="get" action="{% url 'products:product_list' %}" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control"
+                   placeholder="Поиск по названию или артикулу..."
+                   value="{{ query|default:'' }}">
+            <button type="submit" class="btn btn-outline-primary">Найти</button>
+            {% if query %}
+            <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary">
+                Сбросить
+            </a>
+            {% endif %}
+        </form>
+    </div>
+    <div class="col-md-6 d-flex justify-content-md-end align-items-center gap-2">
+        <span class="text-muted">Сортировка:</span>
+        <a href="{% url 'products:product_list' %}?sort=stock_asc{% if query %}&q={{ query }}{% endif %}"
+           class="btn btn-sm {% if sort == 'stock_asc' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Остаток ↑
+        </a>
+        <a href="{% url 'products:product_list' %}?sort=stock_desc{% if query %}&q={{ query }}{% endif %}"
+           class="btn btn-sm {% if sort == 'stock_desc' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Остаток ↓
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Артикул</th>
+                <th>Категория</th>
+                <th>Остаток</th>
+                <th>Цена</th>
+                <th>Стоимость</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                {% include "products/includes/product_card.html" %}
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        {% if query %}
+                            По запросу «{{ query }}» товаров не найдено.
+                        {% else %}
+                            Товаров пока нет.
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,15 @@
+<tr>
+    <td><a href="{% url 'products:product_detail' product.id %}">{{ product.id }}</a></td>
+    <td>{{ product.name|default:"Без названия" }}</td>
+    <td><code>{{ product.article }}</code></td>
+    <td>{{ product.category }}</td>
+    <td>
+        {% if product.stock >= 10 %}
+        <span class="badge bg-success stock-status">{{ product.stock }} {{ product.unit }}</span>
+        {% else %}
+        <span class="badge bg-danger stock-status">{{ product.stock }} {{ product.unit }}</span>
+        {% endif %}
+    </td>
+    <td>{{ product.price|floatformat:2 }} ₽</td>
+    <td>{{ product.get_total_value|floatformat:2 }} ₽</td>
+</tr>

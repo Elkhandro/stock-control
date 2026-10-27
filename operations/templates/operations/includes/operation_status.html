@@ -1,0 +1,13 @@
+{% if show_type %}
+    {% if operation.operation_type == "приход" %}
+    <span class="badge bg-success">Приход</span>
+    {% else %}
+    <span class="badge bg-warning text-dark">Расход</span>
+    {% endif %}
+{% else %}
+    {% if operation.is_cancelled %}
+    <span class="badge bg-secondary stock-status">отменена</span>
+    {% else %}
+    <span class="badge bg-primary stock-status">активна</span>
+    {% endif %}
+{% endif %}

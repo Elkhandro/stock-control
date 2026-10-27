@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — Складской учёт{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🏭 Центральный склад</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-bg-primary h-100 product-card">
+            <div class="card-body">
+                <h5 class="card-title">Товаров на складе</h5>
+                <p class="display-6">{{ products|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-success h-100 product-card">
+            <div class="card-body">
+                <h5 class="card-title">Общая стоимость</h5>
+                <p class="display-6">{{ total_value|floatformat:2 }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-warning h-100 product-card">
+            <div class="card-body">
+                <h5 class="card-title">Активных операций</h5>
+                <p class="display-6">{{ active_operations|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if low_stock %}
+<div class="card border-danger mb-4">
+    <div class="card-header bg-danger text-white">
+        ⚠️ Товары с низким остатком (&lt; 10 шт.)
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for product in low_stock %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{% url 'products:product_detail' product.id %}">{{ product.name }}</a>
+            <span class="badge bg-danger">{{ product.stock }} {{ product.unit }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% else %}
+<div class="alert alert-success">
+    ✅ Все товары имеют достаточный остаток.
+</div>
+{% endif %}
+{% endblock %}

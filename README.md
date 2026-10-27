@@ -2,12 +2,15 @@
 
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
 
-## Текущее состояние (PR5)
+## Текущее состояние (PR6)
 
-- ✅ Консольная версия (ПР3, ООП) — полностью рабочая
-- ✅ Django 5.2 веб-интерфейс — базовые страницы чтения
+- ✅ Django 5.2 веб-интерфейс на системе шаблонов
+- ✅ Базовый шаблон с наследованием (`extends`, `block`)
+- ✅ Переиспользуемые компоненты (`include`)
+- ✅ Именованные URL с namespaces
+- ✅ Статические файлы (CSS, JS, изображения)
 - ✅ Данные хранятся в JSON (ORM не используется)
-- ✅ Классы `models/`, `storage.py`, тесты — сохранены и используются в вебе
+- ✅ Классы `Product` и `StockOperation` из ПР3
 
 ## Назначение
 
@@ -28,6 +31,45 @@
 Область охватывает процессы хранения, идентификации товаров, учёта их
 движения (приход/расход) и формирования отчётности по текущему состоянию
 склада.
+
+Именованные URL
+Все ссылки используют {% url %} вместо жёстких адресов:
+<a href="{% url 'products:product_detail' product.id %}">
+
+
+Фильтры шаблонов
+Используются встроенные фильтры Django:
+{{ products|length }} — количество товаров
+{{ product.name|default:"Без названия" }} — значение по умолчанию
+{{ product.price|floatformat:2 }} — форматирование числа
+{{ operation.operation_date|date:"d.m.Y" }} — форматирование даты
+
+
+View-функции передают контекст в render()
+
+page() удалена — в обновлённом homepage/views.py её нет, все views используют render(). ✅
+app_name = "homepage" — в homepage/urls.py прописан явно. ✅
+Именованные URL во всех трёх приложениях — app_name + name= везде есть. ✅
+Структура homepage/static/homepage/ — правильная вложенность. ✅
+findstatic — в списке команд проверки. ✅
+Footer с <span id="current-year"> и JS перед </body> — корректно. ✅
+Классы .product-card, .stock-status — добавлены в CSS и используются в шаблонах. ✅
+Возврат через {% url %} — нигде нет жёстких адресов. ✅
+Не трогаем models/, storage.py, консольную версию — не тронуты. ✅
+Нет ORM, форм, БД — только JSON и шаблоны. ✅
+Новый репозиторий не создавался. ✅
+
+
+
+
+## Технологии
+-Python 3.12, Django 5.2
+-Bootstrap 5.3 (CDN)
+-Система шаблонов Django (extends, block, include, url)
+-JSON-файлы как хранилище данных (без ORM)
+-Статические файлы (CSS, JS, изображения)
+
+
 
 ## Основные сущности (ООП-модель, ПР3)
 
@@ -97,37 +139,99 @@
 ## Структура проекта
 
 stock-control/
-├── manage.py # Django management
-├── stockcontrol/ # Django project settings
-│ ├── settings.py
-│ ├── urls.py
-│ └── wsgi.py
-├── homepage/ # Главная страница + 404
-│ ├── views.py
-│ └── urls.py
-├── products/ # Страницы товаров
-│ ├── views.py
-│ └── urls.py
-├── operations/ # Страницы складских операций
-│ ├── views.py
-│ └── urls.py
-├── models/ # ООП-классы (ПР3)
-│ ├── product.py
-│ └── operation.py
-├── services/ # Сервисные функции (ПР3)
-│ ├── product_service.py
-│ └── operation_service.py
-├── storage.py # JSON ↔ объекты
-├── utils.py # Консольный ввод
-├── main.py # Консольная точка входа
-├── data/
-│ ├── products.json
-│ └── operations.json
-├── tests/ # Тесты ПР3
-│ ├── test_product.py
-│ └── test_operation.py
-├── requirements.txt
-└── README.md
+│
+├── manage.py                          
+├── main.py                            
+├── storage.py                         
+├── utils.py                           
+├── requirements.txt                   
+├── README.md                          
+├── setup.cfg
+├── .gitignore
+│
+├── stockcontrol/                      
+│   ├── __init__.py
+│   ├── settings.py                    
+│   ├── urls.py                        
+│   ├── wsgi.py
+│   └── asgi.py
+│
+├── templates/                         
+│   ├── base.html                      
+│   └── includes/
+│       ├── navigation.html           
+│       └── footer.html                
+│
+├── homepage/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── views.py                       
+│   ├── urls.py                        
+│   ├── migrations/
+│   ├── templates/                     
+│   │   └── homepage/
+│   │       ├── index.html             
+│   │       └── 404.html               
+│   └── static/                        
+│       └── homepage/
+│           ├── css/style.css          
+│           ├── js/main.js             
+│           └── img/logo.png           
+│
+├── products/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── views.py                       
+│   ├── urls.py                        
+│   ├── migrations/
+│   └── templates/                    
+│       └── products/
+│           ├── product_list.html      
+│           ├── product_detail.html    
+│           ├── product_add.html       
+│           └── includes/
+│               └── product_card.html  
+│
+├── operations/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── tests.py
+│   ├── views.py                       
+│   ├── urls.py                        
+│   ├── migrations/
+│   └── templates/                     
+│       └── operations/
+│           ├── operation_list.html    
+│           ├── operation_detail.html  
+│           ├── operation_form.html    
+│           └── includes/
+│               └── operation_status.html 
+│
+├── models/                            
+│   ├── __init__.py
+│   ├── product.py
+│   └── operation.py                   
+│
+├── services/                          
+│   ├── __init__.py
+│   ├── product_service.py
+│   └── operation_service.py
+│
+├── data/                              
+│   ├── products.json
+│   └── operations.json
+│
+└── tests/                             
+    ├── test_product.py
+    └── test_operation.py
 
 ## Назначение модулей
 

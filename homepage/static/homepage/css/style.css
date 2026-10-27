@@ -1,0 +1,17 @@
+/* Кастомные стили для проекта */
+
+.product-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+}
+
+.stock-status {
+  font-size: 0.9em;
+}
+
+.navbar-brand img {
+  border-radius: 4px;
+}
