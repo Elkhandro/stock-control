@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🔍 Поиск товаров по остатку</h2>
+
+<form method="get" class="mb-4">
+    <div class="input-group" style="max-width: 400px;">
+        <input type="number" name="max_stock" class="form-control"
+               value="{{ max_stock }}" min="0" placeholder="Максимальный остаток">
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </div>
+</form>
+
+{% if max_stock %}
+    {% if products %}
+        <p class="text-muted">Найдено товаров с остатком ≤ {{ max_stock }}: {{ products|length }}</p>
+        <div class="row">
+            {% for product in products %}
+            <div class="col-md-4 mb-3">
+                <div class="card product-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">Артикул: {{ product.article }}</p>
+                        <p class="card-text">Категория: {{ product.category|default:"—" }}</p>
+                        <p class="card-text fw-bold stock-status">Остаток: {{ product.stock }} {{ product.unit }}</p>
+                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">⚠️ Товары с остатком ≤ {{ max_stock }} не найдены</div>
+    {% endif %}
+{% else %}
+    <p class="text-muted">Введите значение и нажмите «Найти»</p>
+{% endif %}
+{% endblock %}

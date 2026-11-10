@@ -1,5 +1,6 @@
 """View-функции приложения products (товары)."""
 
+import sqlite3
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -11,10 +12,15 @@ from services.product_service import (
     find_product_by_id,
     sort_products_by_stock,
 )
+from db.database import get_connection
 
 
 PRODUCTS_FILE = "data/products.json"
 
+
+# ============================================================
+# СТАРЫЕ VIEW-ФУНКЦИИ (JSON) — НЕ УДАЛЯТЬ! Требование ПР7
+# ============================================================
 
 def _load_all_products():
     """Загрузить все товары из JSON."""
@@ -26,16 +32,14 @@ def _save_all_products(products):
     save_products(PRODUCTS_FILE, products)
 
 
-def product_list(request) -> HttpResponse:
-    """Страница списка товаров с поиском и сортировкой."""
+def product_list_json(request) -> HttpResponse:
+    """[JSON] Страница списка товаров с поиском и сортировкой."""
     products_list = _load_all_products()
 
-    # Поиск
     query = request.GET.get("q", "").strip()
     if query:
         products_list = find_product(products_list, query)
 
-    # Сортировка
     sort_param = request.GET.get("sort", "")
     if sort_param == "stock_asc":
         products_list = sort_products_by_stock(products_list, reverse=False)
@@ -50,8 +54,8 @@ def product_list(request) -> HttpResponse:
     return render(request, "products/product_list.html", context)
 
 
-def product_detail(request, product_id: int) -> HttpResponse:
-    """Страница подробной информации о товаре."""
+def product_detail_json(request, product_id: int) -> HttpResponse:
+    """[JSON] Страница подробной информации о товаре."""
     products_list = _load_all_products()
     product = find_product_by_id(products_list, product_id)
 
@@ -71,7 +75,7 @@ def product_detail(request, product_id: int) -> HttpResponse:
 
 @require_http_methods(["GET", "POST"])
 def product_add(request) -> HttpResponse:
-    """Страница добавления нового товара."""
+    """[JSON] Страница добавления нового товара."""
     context = {"error": "", "success": ""}
 
     if request.method == "POST":
@@ -100,3 +104,68 @@ def product_add(request) -> HttpResponse:
                 context["error"] = "Цена должна быть числом, остаток — целым числом."
 
     return render(request, "products/product_add.html", context)
+
+
+# ============================================================
+# НОВЫЕ VIEW-ФУНКЦИИ (SQLite) — ПР7
+# ============================================================
+
+def product_list(request) -> HttpResponse:
+    """[SQLite] Список всех товаров."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT id, name, article, category, unit, price, stock "
+        "FROM products ORDER BY name"
+    ).fetchall()
+    conn.close()
+    return render(request, "products/product_list.html", {"products": rows})
+
+
+def product_detail(request, pk: int) -> HttpResponse:
+    """[SQLite] Карточка товара + связанные операции (JOIN)."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+
+    product = conn.execute(
+        "SELECT * FROM products WHERE id = ?", [pk]
+    ).fetchone()
+
+    operations = []
+    if product:
+        operations = conn.execute(
+            "SELECT id, operation_type, quantity, operation_date, comment, is_cancelled "
+            "FROM operations WHERE product_id = ? ORDER BY operation_date DESC",
+            [pk]
+        ).fetchall()
+
+    conn.close()
+
+    if product is None:
+        return render(request, "products/product_detail.html", {"product": None}, status=404)
+
+    return render(request, "products/product_detail.html", {
+        "product": product,
+        "operations": operations,
+    })
+
+
+def product_search(request) -> HttpResponse:
+    """[SQLite] Поиск товаров по максимальному остатку (GET-параметр)."""
+    max_stock = request.GET.get("max_stock", "")
+    rows = []
+
+    if max_stock.isdigit():
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, name, article, category, unit, price, stock "
+            "FROM products WHERE stock <= ? ORDER BY stock ASC",
+            [int(max_stock)]
+        ).fetchall()
+        conn.close()
+
+    return render(request, "products/product_search.html", {
+        "products": rows,
+        "max_stock": max_stock,
+    })

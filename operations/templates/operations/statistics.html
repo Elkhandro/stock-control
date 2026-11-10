@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📊 Статистика склада</h2>
+
+<!-- Общая сводка -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Общая стоимость</h5>
+                <p class="card-text display-6">{{ summary.total_value|floatformat:2 }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h5 class="card-title">Всего товаров</h5>
+                <p class="card-text display-6">{{ summary.total_products }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Единиц на складе</h5>
+                <p class="card-text display-6">{{ summary.total_units }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика по категориям -->
+<h3 class="mt-4">По категориям</h3>
+{% if category_stats %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Категория</th>
+            <th>Товаров</th>
+            <th>Общий остаток</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stat in category_stats %}
+        <tr>
+            <td>{{ stat.category }}</td>
+            <td>{{ stat.product_count }}</td>
+            <td>{{ stat.total_stock }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">⚠️ Данные отсутствуют</div>
+{% endif %}
+{% endblock %}

@@ -4,6 +4,9 @@
 
 {% block content %}
 <h1 class="mb-4">📦 Товары на складе</h1>
+<a href="{% url 'products:product_search' %}" class="btn btn-outline-primary">
+        🔍 Поиск по остаткам
+</a>
 
 <div class="row g-3 mb-4">
     <div class="col-md-6">

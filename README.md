@@ -2,8 +2,8 @@
 
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
 
-## Текущее состояние (PR6)
-
+## Текущее состояние (PR7)
+- ✅ Добавлен слой хранения SQLite (`sqlite3` напрямую, без Django ORM)
 - ✅ Django 5.2 веб-интерфейс на системе шаблонов
 - ✅ Базовый шаблон с наследованием (`extends`, `block`)
 - ✅ Переиспользуемые компоненты (`include`)
@@ -31,6 +31,54 @@
 Область охватывает процессы хранения, идентификации товаров, учёта их
 движения (приход/расход) и формирования отчётности по текущему состоянию
 склада.
+
+## Слой хранения SQLite (ПР7)
+
+### Структура таблиц
+
+**products**
+| Поле | Тип | Ограничения |
+|------|-----|-------------|
+| id | INTEGER | PRIMARY KEY |
+| name | TEXT | NOT NULL |
+| article | TEXT | NOT NULL, UNIQUE |
+| category | TEXT | nullable |
+| unit | TEXT | NOT NULL, DEFAULT 'шт.' |
+| price | REAL | NOT NULL, DEFAULT 0.0 |
+| stock | INTEGER | NOT NULL, DEFAULT 0 |
+
+**operations**
+| Поле | Тип | Ограничения |
+|------|-----|-------------|
+| id | INTEGER | PRIMARY KEY |
+| product_id | INTEGER | NOT NULL, FK → products(id) |
+| operation_type | TEXT | NOT NULL, CHECK ('приход','расход') |
+| quantity | INTEGER | NOT NULL, CHECK (> 0) |
+| operation_date | TEXT | NOT NULL |
+| comment | TEXT | nullable |
+| is_cancelled | INTEGER | NOT NULL, DEFAULT 0 |
+
+### Файлы слоя БД
+- `sql/schema.sql` — DDL-скрипт создания таблиц
+- `sql/queries.sql` — 10 SQL-запросов (2 выборки, 2 WHERE, 2 JOIN, 2 агрегата, 2 GROUP BY+HAVING)
+- `db/database.py` — `get_connection()` с `PRAGMA foreign_keys = ON`
+- `db/import_json.py` — миграция JSON → SQLite (`python -m db.import_json`)
+- `data/stock_control.sqlite` — файл базы данных
+
+### Страницы на SQLite
+| URL | View | Тип запроса |
+|-----|------|-------------|
+| `/` | `homepage.views.index` | Агрегат + WHERE |
+| `/products/` | `products.views.product_list` | SELECT + ORDER BY |
+| `/products/<id>/` | `products.views.product_detail` | SELECT + JOIN |
+| `/products/search/` | `products.views.product_search` | WHERE + параметр `?` |
+| `/operations/` | `operations.views.operation_list` | INNER JOIN |
+| `/operations/<id>/` | `operations.views.operation_detail` | JOIN |
+| `/operations/statistics/` | `operations.views.operation_statistics` | GROUP BY + HAVING |
+
+> ⚠️ Django ORM не используется. JSON-хранилище (`data/*.json`) и классы `models/product.py`, `models/operation.py` сохранены как предыдущая реализация (ПР1–ПР6).
+
+
 
 Именованные URL
 Все ссылки используют {% url %} вместо жёстких адресов:
@@ -139,28 +187,46 @@ Footer с <span id="current-year"> и JS перед </body> — корректн
 ## Структура проекта
 
 stock-control/
-│
-├── manage.py                          
-├── main.py                            
-├── storage.py                         
-├── utils.py                           
-├── requirements.txt                   
-├── README.md                          
+├── manage.py
+├── main.py
+├── storage.py
+├── utils.py
+├── requirements.txt
+├── README.md
 ├── setup.cfg
 ├── .gitignore
+├── db.sqlite3
 │
-├── stockcontrol/                      
+├── db/
 │   ├── __init__.py
-│   ├── settings.py                    
-│   ├── urls.py                        
+│   ├── database.py
+│   └── import_json.py
+│
+├── sql/
+│   ├── schema.sql
+│   └── queries.sql
+│
+├── data/
+│   ├── products.json
+│   ├── operations.json
+│   └── stock_control.sqlite
+│
+├── models/
+│   ├── __init__.py
+│   ├── product.py
+│   └── operation.py
+│
+├── services/
+│   ├── __init__.py
+│   ├── product_service.py
+│   └── operation_service.py
+│
+├── stockcontrol/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
 │   ├── wsgi.py
 │   └── asgi.py
-│
-├── templates/                         
-│   ├── base.html                      
-│   └── includes/
-│       ├── navigation.html           
-│       └── footer.html                
 │
 ├── homepage/
 │   ├── __init__.py
@@ -168,18 +234,18 @@ stock-control/
 │   ├── apps.py
 │   ├── models.py
 │   ├── tests.py
-│   ├── views.py                       
-│   ├── urls.py                        
+│   ├── views.py
+│   ├── urls.py
 │   ├── migrations/
-│   ├── templates/                     
+│   ├── templates/
 │   │   └── homepage/
-│   │       ├── index.html             
-│   │       └── 404.html               
-│   └── static/                        
+│   │       ├── index.html
+│   │       └── 404.html
+│   └── static/
 │       └── homepage/
-│           ├── css/style.css          
-│           ├── js/main.js             
-│           └── img/logo.png           
+│           ├── css/style.css
+│           ├── js/main.js
+│           └── img/logo_stock.png
 │
 ├── products/
 │   ├── __init__.py
@@ -187,16 +253,17 @@ stock-control/
 │   ├── apps.py
 │   ├── models.py
 │   ├── tests.py
-│   ├── views.py                       
-│   ├── urls.py                        
+│   ├── views.py
+│   ├── urls.py
 │   ├── migrations/
-│   └── templates/                    
+│   └── templates/
 │       └── products/
-│           ├── product_list.html      
-│           ├── product_detail.html    
-│           ├── product_add.html       
+│           ├── product_list.html
+│           ├── product_detail.html
+│           ├── product_add.html
+│           ├── product_search.html
 │           └── includes/
-│               └── product_card.html  
+│               └── product_card.html
 │
 ├── operations/
 │   ├── __init__.py
@@ -204,34 +271,30 @@ stock-control/
 │   ├── apps.py
 │   ├── models.py
 │   ├── tests.py
-│   ├── views.py                       
-│   ├── urls.py                        
+│   ├── views.py
+│   ├── urls.py
 │   ├── migrations/
-│   └── templates/                     
+│   └── templates/
 │       └── operations/
-│           ├── operation_list.html    
-│           ├── operation_detail.html  
-│           ├── operation_form.html    
+│           ├── operation_list.html
+│           ├── operation_detail.html
+│           ├── operation_form.html
+│           ├── statistics.html
 │           └── includes/
-│               └── operation_status.html 
+│               └── operation_status.html
 │
-├── models/                            
-│   ├── __init__.py
-│   ├── product.py
-│   └── operation.py                   
+├── templates/
+│   ├── base.html
+│   └── includes/
+│       ├── navigation.html
+│       └── footer.html
 │
-├── services/                          
-│   ├── __init__.py
-│   ├── product_service.py
-│   └── operation_service.py
+├── tests/
+│   ├── test_product.py
+│   └── test_operation.py
 │
-├── data/                              
-│   ├── products.json
-│   └── operations.json
-│
-└── tests/                             
-    ├── test_product.py
-    └── test_operation.py
+├── venv/
+└── __pycache__/
 
 ## Назначение модулей
 
@@ -318,6 +381,8 @@ python -m pytest -v
 ```text
 flake8 .
 ```
+## импорт json
+python -m db.import_json
 
 ## Запуск Веб-версия
 

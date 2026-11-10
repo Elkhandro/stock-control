@@ -6,6 +6,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0">📋 История складских операций</h1>
     <div class="d-flex gap-2">
+        <a href="{% url 'operations:operation_statistics' %}" class="btn btn-outline-primary">
+            📊 Статистика
+        </a>
         <a href="{% url 'operations:operation_receive' %}" class="btn btn-success">
             📥 Приход
         </a>
@@ -37,15 +40,27 @@
                     </a>
                 </td>
                 <td>
-                    <a href="{% url 'products:product_detail' operation.product.id %}">
-                        {{ operation.product.name }}
+                    <a href="{% url 'products:product_detail' operation.product_id %}">
+                        {{ operation.product_name }}
                     </a>
                 </td>
-                <td>{% include "operations/includes/operation_status.html" with show_type=True %}</td>
-                <td>{{ operation.quantity }} {{ operation.product.unit }}</td>
-                <td>{{ operation.display_date }}</td>
+                <td>
+                    {% if operation.operation_type == 'приход' %}
+                        <span class="badge bg-success">Приход</span>
+                    {% else %}
+                        <span class="badge bg-danger">Расход</span>
+                    {% endif %}
+                </td>
+                <td>{{ operation.quantity }}</td>
+                <td>{{ operation.operation_date }}</td>
                 <td>{{ operation.comment|default:"—" }}</td>
-                <td>{% include "operations/includes/operation_status.html" with show_type=False %}</td>
+                <td>
+                    {% if operation.is_cancelled %}
+                        <span class="badge bg-secondary">Отменена</span>
+                    {% else %}
+                        <span class="badge bg-primary">Активна</span>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>

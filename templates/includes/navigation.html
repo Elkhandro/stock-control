@@ -28,29 +28,25 @@
           <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'products:product_list' %}"
-            >Товары</a
-          >
+          <a class="nav-link" href="{% url 'products:product_list' %}">Товары</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'products:product_add' %}"
-            >+ Товар</a
-          >
+          <a class="nav-link" href="{% url 'products:product_search' %}">🔍 Поиск</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'operations:operation_list' %}"
-            >Операции</a
-          >
+          <a class="nav-link" href="{% url 'products:product_add' %}">+ Товар</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'operations:operation_receive' %}"
-            >📥 Приход</a
-          >
+          <a class="nav-link" href="{% url 'operations:operation_list' %}">Операции</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'operations:operation_ship' %}"
-            >📤 Расход</a
-          >
+          <a class="nav-link" href="{% url 'operations:operation_statistics' %}">📊 Статистика</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_receive' %}">📥 Приход</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_ship' %}">📤 Расход</a>
         </li>
       </ul>
     </div>

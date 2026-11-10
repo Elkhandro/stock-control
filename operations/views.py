@@ -1,5 +1,6 @@
 """View-функции приложения operations (складские операции)."""
 
+import sqlite3
 from datetime import date
 
 from django.shortcuts import render
@@ -9,11 +10,16 @@ from django.views.decorators.http import require_http_methods
 from storage import load_products, load_operations, save_operations, save_products
 from models.operation import RECEIPT, ISSUE
 from services.operation_service import create_operation
+from db.database import get_connection
 
 
 OPERATIONS_FILE = "data/operations.json"
 PRODUCTS_FILE = "data/products.json"
 
+
+# ============================================================
+# СТАРЫЕ VIEW-ФУНКЦИИ (JSON) — НЕ УДАЛЯТЬ! Требование ПР7
+# ============================================================
 
 def _load_all_operations():
     """Загрузить все операции из JSON со связанными товарами."""
@@ -27,15 +33,15 @@ def _load_all_products():
     return load_products(PRODUCTS_FILE)
 
 
-def operation_list(request) -> HttpResponse:
-    """Страница списка всех складских операций."""
+def operation_list_json(request) -> HttpResponse:
+    """[JSON] Страница списка всех складских операций."""
     ops = _load_all_operations()
     context = {"operations": ops}
     return render(request, "operations/operation_list.html", context)
 
 
-def operation_detail(request, operation_id: int) -> HttpResponse:
-    """Страница подробной информации об операции."""
+def operation_detail_json(request, operation_id: int) -> HttpResponse:
+    """[JSON] Страница подробной информации об операции."""
     ops = _load_all_operations()
     operation = None
     for op in ops:
@@ -53,18 +59,18 @@ def operation_detail(request, operation_id: int) -> HttpResponse:
 
 @require_http_methods(["GET", "POST"])
 def operation_receive(request) -> HttpResponse:
-    """Страница прихода товара на склад."""
+    """[JSON] Страница прихода товара на склад."""
     return _operation_form(request, RECEIPT)
 
 
 @require_http_methods(["GET", "POST"])
 def operation_ship(request) -> HttpResponse:
-    """Страница расхода товара со склада."""
+    """[JSON] Страница расхода товара со склада."""
     return _operation_form(request, ISSUE)
 
 
 def _operation_form(request, operation_type: str) -> HttpResponse:
-    """Универсальная форма для прихода/расхода."""
+    """[JSON] Универсальная форма для прихода/расхода."""
     type_label = "Приход" if operation_type == RECEIPT else "Расход"
     icon = "📥" if operation_type == RECEIPT else "📤"
     btn_class = "btn-success" if operation_type == RECEIPT else "btn-warning"
@@ -124,3 +130,73 @@ def _operation_form(request, operation_type: str) -> HttpResponse:
                 context["error"] = "Некорректный формат данных. Проверьте ввод."
 
     return render(request, "operations/operation_form.html", context)
+
+
+# ============================================================
+# НОВЫЕ VIEW-ФУНКЦИИ (SQLite) — ПР7
+# ============================================================
+
+def operation_list(request) -> HttpResponse:
+    """[SQLite] История операций с JOIN (названия товаров)."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    
+    # ИСПРАВЛЕНО: Добавлено o.product_id в выборку
+    rows = conn.execute(
+        "SELECT o.id, o.product_id, p.name AS product_name, p.article, "
+        "o.operation_type, o.quantity, o.operation_date, "
+        "o.comment, o.is_cancelled "
+        "FROM operations o "
+        "JOIN products p ON o.product_id = p.id "
+        "ORDER BY o.operation_date DESC, o.id DESC"
+    ).fetchall()
+    
+    conn.close()
+    return render(request, "operations/operation_list.html", {"operations": rows})
+
+
+def operation_detail(request, pk: int) -> HttpResponse:
+    """[SQLite] Детали операции с названием товара (JOIN)."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT o.*, p.name AS product_name, p.article, p.unit "
+        "FROM operations o "
+        "JOIN products p ON o.product_id = p.id "
+        "WHERE o.id = ?",
+        [pk]
+    ).fetchone()
+    conn.close()
+
+    if row is None:
+        return render(request, "operations/operation_detail.html", {"operation": None}, status=404)
+
+    return render(request, "operations/operation_detail.html", {"operation": row})
+
+
+def operation_statistics(request) -> HttpResponse:
+    """[SQLite] Статистика по категориям (GROUP BY + LEFT JOIN + HAVING)."""
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+
+    category_stats = conn.execute(
+        "SELECT COALESCE(category, 'Без категории') AS category, "
+        "SUM(stock) AS total_stock, "
+        "COUNT(*) AS product_count "
+        "FROM products "
+        "GROUP BY category "
+        "HAVING total_stock >= 0"
+    ).fetchall()
+
+    summary = conn.execute(
+        "SELECT SUM(price * stock) AS total_value, "
+        "COUNT(*) AS total_products, "
+        "SUM(stock) AS total_units "
+        "FROM products"
+    ).fetchone()
+
+    conn.close()
+    return render(request, "operations/statistics.html", {
+        "category_stats": category_stats,
+        "summary": summary,
+    })

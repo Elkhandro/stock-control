@@ -18,30 +18,40 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="mb-0">Операция №{{ operation.id }}</h2>
-        {% include "operations/includes/operation_status.html" with show_type=False %}
+        {% if operation.is_cancelled %}
+            <span class="badge bg-secondary">Отменена</span>
+        {% else %}
+            <span class="badge bg-primary">Активна</span>
+        {% endif %}
     </div>
     <div class="card-body">
         <table class="table table-borderless">
             <tr>
                 <th width="30%">Товар:</th>
                 <td>
-                    <a href="{% url 'products:product_detail' operation.product.id %}">
-                        {{ operation.product.name }}
+                    <a href="{% url 'products:product_detail' operation.product_id %}">
+                        {{ operation.product_name }}
                     </a>
-                    <small class="text-muted">({{ operation.product.article }})</small>
+                    <small class="text-muted">({{ operation.article }})</small>
                 </td>
             </tr>
             <tr>
                 <th>Тип операции:</th>
-                <td>{% include "operations/includes/operation_status.html" with show_type=True %}</td>
+                <td>
+                    {% if operation.operation_type == 'приход' %}
+                        <span class="badge bg-success">Приход</span>
+                    {% else %}
+                        <span class="badge bg-danger">Расход</span>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
                 <th>Количество:</th>
-                <td>{{ operation.quantity }} {{ operation.product.unit }}</td>
+                <td>{{ operation.quantity }} {{ operation.unit }}</td>
             </tr>
             <tr>
                 <th>Дата:</th>
-                <td>{{ operation.display_date }}</td>
+                <td>{{ operation.operation_date }}</td>
             </tr>
             <tr>
                 <th>Комментарий:</th>
@@ -55,7 +65,7 @@
 </a>
 {% else %}
 <div class="alert alert-danger">
-    ❌ Операция с ID {{ operation_id }} не найдена.
+    ❌ Операция не найдена.
 </div>
 <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-primary">
     ← Вернуться к списку операций
