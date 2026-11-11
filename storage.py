@@ -4,8 +4,6 @@
 """
 
 import json
-from typing import List
-
 from models.product import Product
 from models.operation import StockOperation
 

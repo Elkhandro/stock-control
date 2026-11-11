@@ -1,7 +1,7 @@
 """View-функции приложения products (товары)."""
 
-import sqlite3
-from django.shortcuts import render
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse
 from django.views.decorators.http import require_http_methods
 
@@ -12,7 +12,7 @@ from services.product_service import (
     find_product_by_id,
     sort_products_by_stock,
 )
-from db.database import get_connection
+from products.models import Product
 
 
 PRODUCTS_FILE = "data/products.json"
@@ -107,43 +107,49 @@ def product_add(request) -> HttpResponse:
 
 
 # ============================================================
-# НОВЫЕ VIEW-ФУНКЦИИ (SQLite) — ПР7
+# НОВЫЕ VIEW-ФУНКЦИИ (Django ORM) — ПР9
+# Раньше здесь были прямые SQL-запросы через sqlite3 (ПР7).
 # ============================================================
 
+# Допустимые варианты сортировки: произвольное значение из URL в order_by() не передаём.
+PRODUCT_SORT_FIELDS = {
+    "name": ("name",),
+    "category": ("category", "name"),
+    "stock_asc": ("stock", "name"),
+    "stock_desc": ("-stock", "name"),
+}
+
+
+def _is_int(value: str) -> bool:
+    """Строка — целое неотрицательное число (ASCII-цифры, влезает в INTEGER SQLite)?"""
+    return value.isascii() and value.isdigit() and len(value) <= 18
+
+
 def product_list(request) -> HttpResponse:
-    """[SQLite] Список всех товаров."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    rows = conn.execute(
-        "SELECT id, name, article, category, unit, price, stock "
-        "FROM products ORDER BY name"
-    ).fetchall()
-    conn.close()
-    return render(request, "products/product_list.html", {"products": rows})
+    """[ORM] Список товаров: поиск по названию/артикулу и сортировка."""
+    query = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "name")
+    if sort not in PRODUCT_SORT_FIELDS:
+        sort = "name"
+
+    products_qs = Product.objects.all()
+    if query:
+        products_qs = products_qs.filter(
+            Q(name__icontains=query) | Q(article__icontains=query)
+        )
+    products_qs = products_qs.order_by(*PRODUCT_SORT_FIELDS[sort])
+
+    return render(request, "products/product_list.html", {
+        "products": products_qs,
+        "query": query,
+        "sort": sort,
+    })
 
 
 def product_detail(request, pk: int) -> HttpResponse:
-    """[SQLite] Карточка товара + связанные операции (JOIN)."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-
-    product = conn.execute(
-        "SELECT * FROM products WHERE id = ?", [pk]
-    ).fetchone()
-
-    operations = []
-    if product:
-        operations = conn.execute(
-            "SELECT id, operation_type, quantity, operation_date, comment, is_cancelled "
-            "FROM operations WHERE product_id = ? ORDER BY operation_date DESC",
-            [pk]
-        ).fetchall()
-
-    conn.close()
-
-    if product is None:
-        return render(request, "products/product_detail.html", {"product": None}, status=404)
-
+    """[ORM] Карточка товара + история его операций (обратная связь product.operations)."""
+    product = get_object_or_404(Product, pk=pk)
+    operations = product.operations.order_by("-operation_date", "-pk")
     return render(request, "products/product_detail.html", {
         "product": product,
         "operations": operations,
@@ -151,21 +157,35 @@ def product_detail(request, pk: int) -> HttpResponse:
 
 
 def product_search(request) -> HttpResponse:
-    """[SQLite] Поиск товаров по максимальному остатку (GET-параметр)."""
-    max_stock = request.GET.get("max_stock", "")
-    rows = []
+    """[ORM] Поиск товаров: максимальный остаток, категория, начало артикула."""
+    max_stock = request.GET.get("max_stock", "").strip()
+    category = request.GET.get("category", "").strip()
+    article = request.GET.get("article", "").strip()
 
-    if max_stock.isdigit():
-        conn = get_connection()
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT id, name, article, category, unit, price, stock "
-            "FROM products WHERE stock <= ? ORDER BY stock ASC",
-            [int(max_stock)]
-        ).fetchall()
-        conn.close()
+    searched = bool(max_stock or category or article)
+    products_qs = Product.objects.none()
+
+    if searched:
+        products_qs = Product.objects.all()
+        if _is_int(max_stock):
+            products_qs = products_qs.filter(stock__lte=int(max_stock))
+        if category:
+            products_qs = products_qs.filter(category__iexact=category)
+        if article:
+            products_qs = products_qs.filter(article__istartswith=article)
+        products_qs = products_qs.order_by("stock", "name")
+
+    categories = (
+        Product.objects.order_by("category")
+        .values_list("category", flat=True)
+        .distinct()
+    )
 
     return render(request, "products/product_search.html", {
-        "products": rows,
+        "products": products_qs,
         "max_stock": max_stock,
+        "category": category,
+        "article": article,
+        "categories": categories,
+        "searched": searched,
     })

@@ -1,0 +1,11 @@
+# Виртуальное окружение и кэш
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE / ОС
+.idea/
+.vscode/
+.DS_Store

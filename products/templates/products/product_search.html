@@ -1,19 +1,36 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h2>🔍 Поиск товаров по остатку</h2>
+{% block title %}Поиск товаров — Складской учёт{% endblock %}
 
-<form method="get" class="mb-4">
-    <div class="input-group" style="max-width: 400px;">
+{% block content %}
+<h2>🔍 Поиск товаров</h2>
+
+<form method="get" class="row g-2 mb-4" action="{% url 'products:product_search' %}">
+    <div class="col-md-3">
         <input type="number" name="max_stock" class="form-control"
                value="{{ max_stock }}" min="0" placeholder="Максимальный остаток">
+    </div>
+    <div class="col-md-3">
+        <select name="category" class="form-select">
+            <option value="">Все категории</option>
+            {% for item in categories %}
+            <option value="{{ item }}" {% if category|lower == item|lower %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="article" class="form-control"
+               value="{{ article }}" placeholder="Артикул начинается с...">
+    </div>
+    <div class="col-md-3 d-flex gap-2">
         <button type="submit" class="btn btn-primary">Найти</button>
+        <a href="{% url 'products:product_search' %}" class="btn btn-outline-secondary">Сбросить</a>
     </div>
 </form>
 
-{% if max_stock %}
+{% if searched %}
     {% if products %}
-        <p class="text-muted">Найдено товаров с остатком ≤ {{ max_stock }}: {{ products|length }}</p>
+        <p class="text-muted">Найдено товаров: {{ products|length }}</p>
         <div class="row">
             {% for product in products %}
             <div class="col-md-4 mb-3">
@@ -30,9 +47,9 @@
             {% endfor %}
         </div>
     {% else %}
-        <div class="alert alert-info">⚠️ Товары с остатком ≤ {{ max_stock }} не найдены</div>
+        <div class="alert alert-info">⚠️ Товары по заданным условиям не найдены</div>
     {% endif %}
 {% else %}
-    <p class="text-muted">Введите значение и нажмите «Найти»</p>
+    <p class="text-muted">Задайте один или несколько параметров и нажмите «Найти»</p>
 {% endif %}
 {% endblock %}

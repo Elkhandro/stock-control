@@ -72,7 +72,9 @@ class Product:
         if not available:
             return False, message
         self.stock -= quantity
-        return True, f"Отгружено: -{quantity} {self.unit}. Новый остаток: {self.stock} {self.unit}."
+        return True, (
+            f"Отгружено: -{quantity} {self.unit}. Новый остаток: {self.stock} {self.unit}."
+        )
 
     def get_total_value(self) -> float:
         """Рассчитать общую стоимость остатков товара."""

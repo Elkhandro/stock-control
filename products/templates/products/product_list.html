@@ -24,11 +24,19 @@
     </div>
     <div class="col-md-6 d-flex justify-content-md-end align-items-center gap-2">
         <span class="text-muted">Сортировка:</span>
-        <a href="{% url 'products:product_list' %}?sort=stock_asc{% if query %}&q={{ query }}{% endif %}"
+        <a href="{% url 'products:product_list' %}?sort=name{% if query %}&q={{ query|urlencode }}{% endif %}"
+           class="btn btn-sm {% if sort == 'name' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Название
+        </a>
+        <a href="{% url 'products:product_list' %}?sort=category{% if query %}&q={{ query|urlencode }}{% endif %}"
+           class="btn btn-sm {% if sort == 'category' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            Категория
+        </a>
+        <a href="{% url 'products:product_list' %}?sort=stock_asc{% if query %}&q={{ query|urlencode }}{% endif %}"
            class="btn btn-sm {% if sort == 'stock_asc' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
             Остаток ↑
         </a>
-        <a href="{% url 'products:product_list' %}?sort=stock_desc{% if query %}&q={{ query }}{% endif %}"
+        <a href="{% url 'products:product_list' %}?sort=stock_desc{% if query %}&q={{ query|urlencode }}{% endif %}"
            class="btn btn-sm {% if sort == 'stock_desc' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
             Остаток ↓
         </a>

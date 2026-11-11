@@ -2,7 +2,14 @@
 
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
 
-## Текущее состояние (PR7)
+## Текущее состояние (ПР9)
+- ✅ Доступ к данным переведён с прямых SQL-запросов (`sqlite3`, ПР7) на **Django ORM**
+- ✅ Модели `Product` и `Operation`, миграции в `products/migrations/` и `operations/migrations/`
+- ✅ Рабочая база Django — `db.sqlite3`; данные из базы ПР7 переносятся скриптом `db/import_sqlite_to_orm.py`
+- ✅ Фильтрация, сортировка и пагинация списка операций, поиск товаров, статистика через ORM
+- ✅ SQL-файлы и `db/database.py` из ПР7 сохранены как предыдущая реализация
+
+## Состояние ПР7 (сохранено)
 - ✅ Добавлен слой хранения SQLite (`sqlite3` напрямую, без Django ORM)
 - ✅ Django 5.2 веб-интерфейс на системе шаблонов
 - ✅ Базовый шаблон с наследованием (`extends`, `block`)
@@ -32,7 +39,127 @@
 движения (приход/расход) и формирования отчётности по текущему состоянию
 склада.
 
-## Слой хранения SQLite (ПР7)
+## Django ORM (ПР9)
+
+### Какая база используется
+
+После ПР9 веб-приложение работает с базой **`db.sqlite3`** (её создают миграции Django).
+Исходная база ПР7 `data/stockcontrol.sqlite` остаётся источником данных:
+из неё скриптом переносятся записи (id и связи сохраняются). Резервная копия — `data/stockcontrol_backup.sqlite`.
+Прямые SQL-запросы из представлений удалены: `sqlite3` больше не импортируется ни в одном `views.py`.
+`sql/schema.sql`, `sql/queries.sql`, `db/database.py`, `db/import_json.py` оставлены как предыдущая реализация (ПР7).
+
+### Модели
+
+Модели Django лежат в `models.py` приложений (это **не** пакет `models/` из ПР3 — тот описывает
+обычные классы для консольной версии).
+
+**Product** (`products/models.py`, таблица `products_product`)
+
+| Поле | Тип | Примечание |
+|------|-----|------------|
+| name | CharField(200) | название |
+| article | CharField(50) | уникальный артикул |
+| category | CharField(100) | категория |
+| unit | CharField(20) | единица измерения, по умолчанию «шт.» |
+| price | DecimalField(12, 2) | цена |
+| stock | PositiveIntegerField | остаток |
+
+Методы: `__str__`, `get_total_value()`, `is_low_stock()`, `check_availability()`;
+менеджер `Product.objects.summary()` — сводка (стоимость остатков, число товаров, единиц на складе).
+`Meta`: `ordering = ["name"]`.
+
+**Operation** (`operations/models.py`, таблица `operations_operation`)
+
+| Поле | Тип | Примечание |
+|------|-----|------------|
+| product | ForeignKey(Product) | `on_delete=PROTECT`, `related_name="operations"` |
+| operation_type | CharField(10) | `choices`: «приход» / «расход» |
+| quantity | PositiveIntegerField | + `CheckConstraint(quantity > 0)` |
+| operation_date | DateField | дата операции |
+| comment | CharField(255) | необязательный |
+| is_cancelled | BooleanField | по умолчанию `False` |
+
+Метод `cancel()` помечает операцию отменённой. `Meta`: `ordering = ["-operation_date", "-pk"]`.
+
+**Связь:** один товар — много операций (`product.operations.all()`). `PROTECT` не даёт удалить товар,
+у которого есть история операций, — история движения сохраняется.
+
+### Где какие ORM-запросы
+
+| Направление | Где | Выражение |
+|---|---|---|
+| Получение | `product_list` | `Product.objects.all()` |
+| Получение | `product_detail`, `operation_detail` | `get_object_or_404(...)` |
+| Фильтрация | `operation_list` | `filter(is_cancelled=False)` (статус), `filter(operation_date=...)` |
+| Фильтрация | `operation_list` | `filter(product_id=...)`, `filter(operation_type=...)` — несколько условий = «И» |
+| Фильтрация | `product_search` | `filter(stock__lte=...)` |
+| Фильтрация по связанной | `tests/test_orm.py`, статистика | `filter(product__category=...)`, `Count("operations", filter=Q(operations__is_cancelled=False))` |
+| Исключение | `operation_statistics` | `Product.objects.exclude(pk__in=<активные операции>)` |
+| Поиск | `product_list` | `Q(name__icontains=q) \| Q(article__icontains=q)` |
+| Поиск | `product_search` | `category__iexact`, `article__istartswith` |
+| Сортировка | `product_list`, `operation_list` | `order_by(*SORT_FIELDS[sort])` — только из словаря разрешённых значений |
+| Сортировка по связанной | `operation_list` | `order_by("product__name")` |
+| Связи | `product_detail` | `product.operations.order_by(...)` |
+| Связи | `operation_detail` | `select_related("product")` |
+| Связи | `operation_list` | `annotate(product_name=F("product__name"))` + `values(...)` |
+| Агрегирование | `Product.objects.summary()` | `aggregate(Sum(F("price") * F("stock")), Count, Sum)` |
+| Аннотирование | `operation_statistics` | `values("category").annotate(Count, Sum)`, `values("operation_type").annotate(...)` |
+| Пагинация | `operation_list` | `Paginator(..., 5).get_page(page)` + `{% querystring %}` |
+
+Статистика по товарам строится от `Product`, поэтому товары без операций не выпадают;
+отменённые операции в статистике не учитываются.
+
+### Регистронезависимый поиск по кириллице
+
+Штатный `LIKE` в SQLite не различает регистр только у латиницы, поэтому `icontains="ноутбук"`
+не находил бы «Ноутбук». В `db/sqlite_like.py` лежит Unicode-версия `LIKE`, которая
+подключается при каждом соединении с SQLite (`products/apps.py`, метод `ready()`).
+
+### Страницы
+
+| URL | Что показывает |
+|-----|----------------|
+| `/` | сводка, товары с низким остатком (< 10), число активных операций |
+| `/products/` | список товаров: поиск `?q=`, сортировка `?sort=name\|category\|stock_asc\|stock_desc` |
+| `/products/<id>/` | карточка товара и история его операций (404 для несуществующего) |
+| `/products/search/` | поиск: `?max_stock=`, `?category=`, `?article=` |
+| `/operations/` | история операций: `?date=`, `?product=`, `?type=`, `?status=active\|cancelled\|all`, `?sort=`, `?page=` |
+| `/operations/<id>/` | карточка операции (404 для несуществующей) |
+| `/operations/statistics/` | сводка, категории, активные операции по типам и товарам, товары без операций |
+| `/products/json/`, `/operations/json/` | старые JSON-страницы (ПР7, сохранены) |
+| `/products/add/`, `/operations/receive/`, `/operations/ship/` | формы (работают через JSON, в ПР9 не менялись) |
+| `/admin/` | админка Django (товары и операции) |
+
+### Запуск проекта
+
+```text
+python -m venv venv
+venv\Scripts\activate            # Windows  (Linux/macOS: source venv/bin/activate)
+pip install -r requirements.txt
+python manage.py migrate
+python db/import_sqlite_to_orm.py  # перенос данных из data/stockcontrol.sqlite
+python manage.py runserver
+```
+
+Открыть http://127.0.0.1:8000/. В настройках `DEBUG = False` (чтобы работала своя страница 404),
+поэтому runserver сам не отдаёт статику (стили и логотип): для просмотра в браузере используйте
+`python manage.py runserver --insecure`.
+
+Просмотр исходной базы ПР7 (только чтение): `python db/inspect_source_db.py`.
+Скрипт переноса можно запускать повторно — он ничего не удаляет и не дублирует записи.
+
+### Проверка
+
+```text
+python manage.py check
+python manage.py showmigrations
+python manage.py makemigrations --check
+pytest -v
+flake8 . --extend-exclude=venv
+```
+
+## Слой хранения SQLite (ПР7, предыдущая реализация)
 
 ### Структура таблиц
 
@@ -76,6 +203,8 @@
 | `/operations/<id>/` | `operations.views.operation_detail` | JOIN |
 | `/operations/statistics/` | `operations.views.operation_statistics` | GROUP BY + HAVING |
 
+> В ПР9 эти же страницы работают через Django ORM (см. раздел выше); SQL-запросы остались в `sql/queries.sql`.
+
 > ⚠️ Django ORM не используется. JSON-хранилище (`data/*.json`) и классы `models/product.py`, `models/operation.py` сохранены как предыдущая реализация (ПР1–ПР6).
 
 
@@ -111,11 +240,13 @@ Footer с <span id="current-year"> и JS перед </body> — корректн
 
 
 ## Технологии
--Python 3.12, Django 5.2
--Bootstrap 5.3 (CDN)
--Система шаблонов Django (extends, block, include, url)
--JSON-файлы как хранилище данных (без ORM)
--Статические файлы (CSS, JS, изображения)
+- Python 3.12, Django 5.2
+- SQLite (`db.sqlite3`), доступ через **Django ORM**
+- Bootstrap 5.3 (CDN)
+- Система шаблонов Django (extends, block, include, url)
+- JSON-файлы — только консольная версия и «старые» JSON-страницы (ПР1–ПР6)
+- Статические файлы (CSS, JS, изображения)
+- pytest, flake8
 
 
 
@@ -195,12 +326,16 @@ stock-control/
 ├── README.md
 ├── setup.cfg
 ├── .gitignore
-├── db.sqlite3
+├── conftest.py                 # настройка pytest для ORM-тестов
+├── db.sqlite3                  # рабочая база Django (ПР9)
 │
 ├── db/
 │   ├── __init__.py
-│   ├── database.py
-│   └── import_json.py
+│   ├── database.py             # sqlite3-соединение (ПР7)
+│   ├── import_json.py          # JSON -> SQLite (ПР7)
+│   ├── inspect_source_db.py    # просмотр базы ПР7 (ПР9)
+│   ├── import_sqlite_to_orm.py # перенос базы ПР7 в Django ORM (ПР9)
+│   └── sqlite_like.py          # Unicode-LIKE для поиска по кириллице
 │
 ├── sql/
 │   ├── schema.sql
@@ -209,7 +344,9 @@ stock-control/
 ├── data/
 │   ├── products.json
 │   ├── operations.json
-│   └── stock_control.sqlite
+│   ├── stock_control.sqlite
+│   ├── stockcontrol.sqlite     # исходная база ПР7 (источник данных)
+│   └── stockcontrol_backup.sqlite
 │
 ├── models/
 │   ├── __init__.py
@@ -255,7 +392,7 @@ stock-control/
 │   ├── tests.py
 │   ├── views.py
 │   ├── urls.py
-│   ├── migrations/
+│   ├── migrations/             # 0001_initial (Product)
 │   └── templates/
 │       └── products/
 │           ├── product_list.html
@@ -273,7 +410,7 @@ stock-control/
 │   ├── tests.py
 │   ├── views.py
 │   ├── urls.py
-│   ├── migrations/
+│   ├── migrations/             # 0001_initial (Operation)
 │   └── templates/
 │       └── operations/
 │           ├── operation_list.html
@@ -291,7 +428,8 @@ stock-control/
 │
 ├── tests/
 │   ├── test_product.py
-│   └── test_operation.py
+│   ├── test_operation.py
+│   └── test_orm.py             # модели, запросы и представления (ПР9)
 │
 ├── venv/
 └── __pycache__/
@@ -387,6 +525,7 @@ python -m db.import_json
 ## Запуск Веб-версия
 
 python manage.py migrate
+python db/import_sqlite_to_orm.py
 python manage.py runserver
 
 # Открыть http://127.0.0.1:8000/
@@ -399,9 +538,14 @@ python manage.py runserver
 git status
 ```
 
+## Автор
+
+<!-- Заполните: ФИО, группа -->
+Индивидуальный проект «Разработка сервиса учёта остатков товаров на складе».
+
 ## План развития
 
-- подключение базы данных;
+- ~~подключение базы данных~~ (SQLite, ПР7; Django ORM, ПР9);
 - реализация пользователей;
 - разработка API;
 - контейнеризация приложения;

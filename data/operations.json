@@ -43,5 +43,32 @@
         "operation_date": "11.11.2026",
         "comment": "",
         "is_cancelled": false
+    },
+    {
+        "id": 6,
+        "product_id": 5,
+        "operation_type": "расход",
+        "quantity": 10,
+        "operation_date": "12.11.2026",
+        "comment": "",
+        "is_cancelled": false
+    },
+    {
+        "id": 7,
+        "product_id": 5,
+        "operation_type": "расход",
+        "quantity": 10,
+        "operation_date": "11.11.2026",
+        "comment": "",
+        "is_cancelled": false
+    },
+    {
+        "id": 8,
+        "product_id": 3,
+        "operation_type": "приход",
+        "quantity": 3,
+        "operation_date": "11.11.2026",
+        "comment": "",
+        "is_cancelled": false
     }
 ]

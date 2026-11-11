@@ -1,11 +1,11 @@
 """View-функции приложения homepage."""
 
-import sqlite3
 from django.shortcuts import render
 from django.http import HttpResponse
 
 from storage import load_products, load_operations
-from db.database import get_connection
+from operations.models import Operation
+from products.models import LOW_STOCK_THRESHOLD, Product
 
 
 # ============================================================
@@ -32,40 +32,20 @@ def index_json(request) -> HttpResponse:
 
 
 # ============================================================
-# НОВАЯ VIEW-ФУНКЦИЯ (SQLite) — ПР7
+# НОВАЯ VIEW-ФУНКЦИЯ (Django ORM) — ПР9
+# Раньше здесь были прямые SQL-запросы через sqlite3 (ПР7).
 # ============================================================
 
 def index(request) -> HttpResponse:
-    """[SQLite] Главная страница: статистика + товары с низким остатком."""
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-
-    # Агрегатная статистика
-    summary = conn.execute(
-        "SELECT SUM(price * stock) AS total_value, "
-        "COUNT(*) AS total_products, "
-        "SUM(stock) AS total_units "
-        "FROM products"
-    ).fetchone()
-
-    # Товары с низким остатком (< 10)
-    low_stock = conn.execute(
-        "SELECT id, name, article, category, stock, unit "
-        "FROM products WHERE stock < 10 "
-        "ORDER BY stock ASC LIMIT 10"
-    ).fetchall()
-
-    # Количество активных операций
-    active_ops_count = conn.execute(
-        "SELECT COUNT(*) AS cnt FROM operations WHERE is_cancelled = 0"
-    ).fetchone()["cnt"]
-
-    conn.close()
+    """[ORM] Главная страница: статистика + товары с низким остатком."""
+    low_stock = (
+        Product.objects.filter(stock__lt=LOW_STOCK_THRESHOLD).order_by("stock", "name")[:10]
+    )
 
     context = {
-        "summary": summary,
+        "summary": Product.objects.summary(),
         "low_stock_products": low_stock,
-        "active_operations_count": active_ops_count,
+        "active_operations_count": Operation.objects.filter(is_cancelled=False).count(),
     }
     return render(request, "homepage/index.html", context)
 

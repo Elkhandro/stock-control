@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Статистика — Складской учёт{% endblock %}
+
 {% block content %}
 <h2>📊 Статистика склада</h2>
 
@@ -9,7 +11,7 @@
         <div class="card text-bg-primary">
             <div class="card-body">
                 <h5 class="card-title">Общая стоимость</h5>
-                <p class="card-text display-6">{{ summary.total_value|floatformat:2 }} ₽</p>
+                <p class="card-text display-6">{{ summary.total_value|default:0|floatformat:2 }} ₽</p>
             </div>
         </div>
     </div>
@@ -25,7 +27,7 @@
         <div class="card text-bg-info">
             <div class="card-body">
                 <h5 class="card-title">Единиц на складе</h5>
-                <p class="card-text display-6">{{ summary.total_units }}</p>
+                <p class="card-text display-6">{{ summary.total_units|default:0 }}</p>
             </div>
         </div>
     </div>
@@ -54,5 +56,66 @@
 </table>
 {% else %}
 <div class="alert alert-info">⚠️ Данные отсутствуют</div>
+{% endif %}
+
+<!-- Активные операции по типам (отменённые не учитываются) -->
+<h3 class="mt-4">Активные операции по типам</h3>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Тип</th>
+            <th>Операций</th>
+            <th>Всего единиц</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stat in type_stats %}
+        <tr>
+            <td>{{ stat.operation_type|capfirst }}</td>
+            <td>{{ stat.operations_count }}</td>
+            <td>{{ stat.total_quantity }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">Активных операций нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Число активных операций по каждому товару (включая товары без операций) -->
+<h3 class="mt-4">Активные операции по товарам</h3>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Товар</th>
+            <th>Артикул</th>
+            <th>Активных операций</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stat in product_stats %}
+        <tr>
+            <td>{{ stat.name }}</td>
+            <td><code>{{ stat.article }}</code></td>
+            <td>{{ stat.operations_count }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">Товаров пока нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Товары без активных операций -->
+<h3 class="mt-4">Товары без активных операций</h3>
+{% if idle_products %}
+<ul class="list-group mb-4">
+    {% for product in idle_products %}
+    <li class="list-group-item">
+        <a href="{% url 'products:product_detail' product.pk %}">{{ product.name }}</a>
+        <small class="text-muted">({{ product.article }})</small>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">По всем товарам есть активные операции.</p>
 {% endif %}
 {% endblock %}

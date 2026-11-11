@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from models.operation import StockOperation, RECEIPT, ISSUE
+from models.operation import StockOperation, RECEIPT
 from models.product import Product
 
 

@@ -76,21 +76,13 @@
                     <a href="{% url 'operations:operation_detail' op.id %}">{{ op.id }}</a>
                 </td>
                 <td>
-                    {% if op.operation_type == 'приход' %}
-                        <span class="badge bg-success">Приход</span>
-                    {% else %}
-                        <span class="badge bg-danger">Расход</span>
-                    {% endif %}
+                    {% include "operations/includes/operation_status.html" with operation=op show_type=True %}
                 </td>
                 <td>{{ op.quantity }} {{ product.unit }}</td>
-                <td>{{ op.operation_date }}</td>
+                <td>{{ op.operation_date|date:"d.m.Y" }}</td>
                 <td>{{ op.comment|default:"—" }}</td>
                 <td>
-                    {% if op.is_cancelled %}
-                        <span class="badge bg-secondary">Отменена</span>
-                    {% else %}
-                        <span class="badge bg-primary">Активна</span>
-                    {% endif %}
+                    {% include "operations/includes/operation_status.html" with operation=op %}
                 </td>
             </tr>
             {% endfor %}

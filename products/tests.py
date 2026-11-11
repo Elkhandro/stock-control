@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+"""Тесты проекта лежат в каталоге tests/ (запуск: pytest -v)."""

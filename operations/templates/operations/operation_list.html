@@ -18,6 +18,54 @@
     </div>
 </div>
 
+<form method="get" action="{% url 'operations:operation_list' %}" class="row g-2 mb-3">
+    <div class="col-md-2">
+        <label class="form-label small mb-0" for="f-date">Дата</label>
+        <input type="date" id="f-date" name="date" class="form-control" value="{{ operation_date }}">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-0" for="f-product">Товар</label>
+        <select id="f-product" name="product" class="form-select">
+            <option value="">Все товары</option>
+            {% for product in products %}
+            <option value="{{ product.pk }}" {% if selected_product == product.pk|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-0" for="f-type">Тип</label>
+        <select id="f-type" name="type" class="form-select">
+            <option value="">Любой</option>
+            {% for value, label in operation_types %}
+            <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-0" for="f-status">Статус</label>
+        <select id="f-status" name="status" class="form-select">
+            <option value="active" {% if status == "active" %}selected{% endif %}>Активные</option>
+            <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Отменённые</option>
+            <option value="all" {% if status == "all" %}selected{% endif %}>Все</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-0" for="f-sort">Сортировка</label>
+        <select id="f-sort" name="sort" class="form-select">
+            <option value="date" {% if sort == "date" %}selected{% endif %}>По дате (новые сверху)</option>
+            <option value="date_asc" {% if sort == "date_asc" %}selected{% endif %}>По дате (старые сверху)</option>
+            <option value="product" {% if sort == "product" %}selected{% endif %}>По товару</option>
+            <option value="type" {% if sort == "type" %}selected{% endif %}>По типу операции</option>
+        </select>
+    </div>
+    <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Найти</button>
+        <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-secondary">Сбросить</a>
+    </div>
+</form>
+
+{% if error %}<p class="text-danger">{{ error }}</p>{% endif %}
+
 <div class="table-responsive">
     <table class="table table-striped table-hover align-middle">
         <thead class="table-dark">
@@ -44,32 +92,42 @@
                         {{ operation.product_name }}
                     </a>
                 </td>
-                <td>
-                    {% if operation.operation_type == 'приход' %}
-                        <span class="badge bg-success">Приход</span>
-                    {% else %}
-                        <span class="badge bg-danger">Расход</span>
-                    {% endif %}
-                </td>
-                <td>{{ operation.quantity }}</td>
-                <td>{{ operation.operation_date }}</td>
+                <td>{% include "operations/includes/operation_status.html" with show_type=True %}</td>
+                <td>{{ operation.quantity }} {{ operation.unit }}</td>
+                <td>{{ operation.operation_date|date:"d.m.Y" }}</td>
                 <td>{{ operation.comment|default:"—" }}</td>
-                <td>
-                    {% if operation.is_cancelled %}
-                        <span class="badge bg-secondary">Отменена</span>
-                    {% else %}
-                        <span class="badge bg-primary">Активна</span>
-                    {% endif %}
-                </td>
+                <td>{% include "operations/includes/operation_status.html" %}</td>
             </tr>
             {% empty %}
             <tr>
                 <td colspan="7" class="text-center text-muted py-4">
-                    Операций пока нет.
+                    Операций по заданным условиям нет.
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Страницы">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">&laquo;</a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+            <a class="page-link" href="{% querystring page=num %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="{% querystring page=page_obj.next_page_number %}">&raquo;</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}
