@@ -32,7 +32,7 @@
                     <tr>
                         <th width="40%">Остаток:</th>
                         <td>
-                            {% if product.stock >= 10 %}
+                            {% if product.stock >= LOW_STOCK_THRESHOLD %}
                             <span class="badge bg-success fs-5 stock-status">
                                 {{ product.stock }} {{ product.unit }}
                             </span>
@@ -46,7 +46,7 @@
                     <tr><th>Цена:</th><td>{{ product.price|floatformat:2 }} ₽</td></tr>
                     <tr>
                         <th>Стоимость остатка:</th>
-                        <td>{% widthratio product.price 1 product.stock as total_value %}{{ product.price|floatformat:2 }} × {{ product.stock }} = {{ total_value|floatformat:2 }} ₽</td>
+                        <td>{{ product.price|floatformat:2 }} × {{ product.stock }} = {{ product.total_value|floatformat:2 }} ₽</td>
                     </tr>
                 </table>
             </div>
