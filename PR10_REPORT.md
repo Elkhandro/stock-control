@@ -1,39 +1,50 @@
-# ПР10 — развитие Django-проекта складского учёта
+# ПР10 — завершение Django-проекта складского учёта
 
-## Основа
+## Адаптация предметной области
 
-Работа выполнена поверх ПР9 в репозитории `Elkhandro/stock-control`, без создания нового проекта. Предметная область сохранена: товары, остатки, приход и расход, история складских операций.
-
-Задания из исходного описания, относящиеся к Roomly, помещениям и бронированиям, адаптированы к существующим моделям `Product` и `Operation`.
+Исходный шаблон методички использует Room, User и Booking. В этом репозитории предметная область — склад: Product и Operation. Поэтому требования адаптированы к товарам, остаткам и движениям товара; фиктивные модели бронирования не добавлялись.
 
 ## Реализовано
 
-- Django Admin для товаров и складских операций: поиск, фильтры, сортировка, постраничный вывод; для операций добавлены оптимизация связанного товара и иерархия дат.
-- Типы операций оформлены через `TextChoices`; состояние операции доступно как вычисляемое свойство `status`, совместимое с существующим `is_cancelled`.
-- Для товара добавлен автоматически создаваемый уникальный slug, отдельный URL `/products/item/<slug>/` и метод `get_absolute_url()`. Старый числовой URL оставлен для совместимости. Существующие числовые URL сохранены.
-- Для товара добавлено вычисляемое поле БД `total_value = price * stock`.
-- Общие значения склада вынесены в контекстный процессор.
-- Добавлены ORM-тесты для новых возможностей.
-- Существующие JSON-модули, консольная версия, URL и структура приложений не удалялись.
+- Django Admin: ProductAdmin с OperationInline, поиском, фильтрами, сортировкой, list_editable, autocomplete_fields, аннотацией числа активных операций и ссылкой на публичную карточку.
+- OperationAdmin: поиск, фильтры, autocomplete_fields, select_related, date_hierarchy, редактирование статуса и массовые действия отмены/завершения/возврата в активные.
+- OperationQuerySet/OperationManager: active(), cancelled(), completed(), for_date(); методы используются в списке и статистике.
+- Статус Operation — CharField с TextChoices ACTIVE/CANCELLED/COMPLETED.
+- Миграция operations.0002_operation_status добавляет status, переносит старые значения is_cancelled и затем удаляет старое поле.
+- Группа Warehouse Operators создаётся миграцией с разрешениями просмотра/добавления/изменения товаров и операций без права удаления.
+- Django Debug Toolbar подключается только при DJANGO_DEBUG=1; URL /__debug__/ и INTERNAL_IPS добавляются в режиме отладки.
+- Slug транслитерируется через Unidecode; миграция обновляет slug существующих товаров.
+- get_absolute_url используется в ORM-шаблонах; числовой URL оставлен для совместимости.
+- LOW_STOCK_THRESHOLD используется в списке товаров и карточках; total_value выводится как GeneratedField.
+- Добавлены help_text, локализованные AppConfig.verbose_name, тесты и инструкции демонстрации.
 
-## Миграция
+## Миграции
 
-Добавлена миграция `products.0002_product_slug_total_value`. Она добавляет slug и вычисляемое поле; существующие товары не удаляются. Рабочая база данных не открывалась и не изменялась напрямую.
+- products.0002_product_slug_total_value — slug и GeneratedField, backfill slug с транслитерацией.
+- products.0003_product_stock_help_text — help_text остатка.
+- operations.0002_operation_status — перенос is_cancelled в status и удаление старого поля.
+- operations.0003_warehouse_operators_group — создание группы Warehouse Operators.
+
+Миграции добавляют/преобразуют поля, не удаляют таблицы товаров и операций. Перед применением к своей базе сделайте резервную копию db.sqlite3.
 
 ## Проверки
 
-Команды для локальной проверки после получения ветки:
+CI workflow выполняет:
+- python manage.py check;
+- DJANGO_DEBUG=1 python manage.py check;
+- python manage.py makemigrations --check --dry-run --verbosity 3;
+- python -m pytest -v.
 
-```bash
-python manage.py check
-python manage.py makemigrations --check
-python manage.py migrate --plan
-python -m pytest -v
-flake8 .
-```
+Фактический итог последнего CI-прогона будет указан после завершения workflow. Результаты локального запуска и снимки экрана пользователя здесь не имитируются.
 
-Результаты выполнения этих команд в среде владельца проекта здесь не заявляются. Для применения миграции к рабочей базе выполни `python manage.py migrate` после резервного копирования файла `db.sqlite3`.
+## Локальная демонстрация и скриншоты
+
+См. PR10_shell_demo.md. Для полного отчёта к защите сохраните собственные скриншоты:
+1. Product Admin со встроенными операциями и аннотацией.
+2. Operation Admin с фильтрами, сортировкой и actions.
+3. Debug Toolbar SQL на /operations/, /operations/<id>/ и /admin/.
+4. Терминал с check, makemigrations --check и pytest.
 
 ## Ветка
 
-`pr10-stock-warehouse` — изменения подготовлены отдельно от `main`.
+Доработки подготовлены в pr10-completion. После зелёного CI их можно слить в main.
