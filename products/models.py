@@ -41,7 +41,7 @@ class Product(models.Model):
         "Цена за единицу", max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
     stock = models.PositiveIntegerField("Остаток", default=0)
-    slug = models.SlugField("URL-идентификатор", max_length=220, blank=True, db_index=True)
+    slug = models.SlugField("URL-идентификатор", max_length=220, blank=True, unique=True)
     total_value = models.GeneratedField(
         expression=F("price") * F("stock"),
         output_field=DecimalField(max_digits=16, decimal_places=2),
@@ -60,16 +60,21 @@ class Product(models.Model):
         return self.name
 
     def save(self, *args, **kwargs) -> None:
-        """Автоматически формировать стабильный URL-slug из названия и артикула."""
+        """Автоматически формировать уникальный URL-slug из названия, артикула и ID."""
+        if not self.slug and self.pk is None:
+            super().save(*args, **kwargs)
         if not self.slug:
-            name_part = slugify(self.name) or "product"
-            article_part = slugify(self.article) or "item"
-            self.slug = f"{name_part}-{article_part}"[:220]
+            name_part = slugify(self.name, allow_unicode=True) or "product"
+            article_part = slugify(self.article, allow_unicode=True) or "item"
+            self.slug = f"{name_part}-{article_part}-{self.pk}"[:220]
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = set(update_fields) | {"slug"}
         super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
-        """Каноническая ссылка на карточку товара."""
-        return reverse("products:product_detail", kwargs={"pk": self.pk})
+        """Каноническая ссылка на карточку товара по slug."""
+        return reverse("products:product_detail_slug", kwargs={"slug": self.slug})
 
     def get_total_value(self) -> Decimal:
         """Общая стоимость остатка товара (цена × остаток)."""
