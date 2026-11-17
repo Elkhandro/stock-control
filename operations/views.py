@@ -190,6 +190,7 @@ def operation_list(request) -> HttpResponse:
         base_operations
         .annotate(
             product_name=F("product__name"),
+            product_slug=F("product__slug"),
             article=F("product__article"),
             unit=F("product__unit"),
         )
