@@ -7,6 +7,7 @@ from django.db import models
 
 from products.models import Product
 
+
 class OperationType(models.TextChoices):
     """Допустимые направления движения товара."""
 
