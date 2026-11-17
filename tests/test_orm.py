@@ -33,6 +33,17 @@ class ModelTests(TestCase):
         self.assertEqual(str(product), "Ноутбук Lenovo")
         self.assertEqual(product.get_total_value(), Decimal("301.50"))
 
+    def test_slug_and_generated_total_value(self):
+        product = make_product(name="Клавиатура Logitech", article="KB-101",
+                               price="1250.50", stock=4)
+        self.assertTrue(product.slug)
+        self.assertIn("kb-101", product.slug)
+        self.assertEqual(product.get_absolute_url(), reverse(
+            "products:product_detail", args=[product.pk]
+        ))
+        product.refresh_from_db()
+        self.assertEqual(product.total_value, Decimal("5002.00"))
+
     def test_low_stock_and_availability(self):
         product = make_product(stock=5)
         self.assertTrue(product.is_low_stock())
@@ -43,6 +54,13 @@ class ModelTests(TestCase):
         make_product()
         with self.assertRaises(IntegrityError), transaction.atomic():
             make_product(name="Другой")
+
+    def test_operation_status_choices(self):
+        active = make_operation(make_product())
+        self.assertEqual(active.status, Operation.Status.ACTIVE)
+        active.cancel()
+        active.refresh_from_db()
+        self.assertEqual(active.status, Operation.Status.CANCELLED)
 
     def test_operation_cancel(self):
         operation = make_operation(make_product())
@@ -138,6 +156,11 @@ class ViewTests(TestCase):
         self.cancelled = make_operation(self.laptop, RECEIPT, 10, day=15, cancelled=True)
         self.op2 = make_operation(self.laptop, ISSUE, 2, day=16)
         self.op3 = make_operation(self.mouse, RECEIPT, 7, day=17)
+
+    def test_shared_warehouse_context(self):
+        response = self.client.get(reverse("homepage:index"))
+        self.assertEqual(response.context["WAREHOUSE_NAME"], "Центральный склад")
+        self.assertEqual(response.context["LOW_STOCK_THRESHOLD"], 10)
 
     def test_all_pages_ok(self):
         for name, args in [
