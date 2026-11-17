@@ -61,12 +61,16 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs) -> None:
         """Автоматически формировать уникальный URL-slug из названия, артикула и ID."""
-        if not self.slug and self.pk is None:
+        creating = self.pk is None
+        if not self.slug and creating:
             super().save(*args, **kwargs)
         if not self.slug:
             name_part = slugify(self.name, allow_unicode=True) or "product"
             article_part = slugify(self.article, allow_unicode=True) or "item"
             self.slug = f"{name_part}-{article_part}-{self.pk}"[:220]
+            if creating:
+                super().save(update_fields=["slug"])
+                return
             update_fields = kwargs.get("update_fields")
             if update_fields is not None:
                 kwargs["update_fields"] = set(update_fields) | {"slug"}
