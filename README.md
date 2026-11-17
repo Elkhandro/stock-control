@@ -481,7 +481,8 @@ stock-control/
 | ------------------- | ----------------------------------- | --------------------------------------------- |
 | `/`                 | `homepage.views.index`              | Главная: статистика, товары с низким остатком |
 | `/products/`        | `products.views.product_list`       | Список всех товаров                           |
-| `/products/<id>/`   | `products.views.product_detail`     | Карточка товара                               |
+| `/products/<id>/`   | `products.views.product_detail`     | Старая числовая карточка товара               |
+| `/products/item/<slug>/` | `products.views.product_detail_by_slug` | Каноническая карточка товара по slug          |
 | `/operations/`      | `operations.views.operation_list`   | История операций                              |
 | `/operations/<id>/` | `operations.views.operation_detail` | Детали операции                               |
 | Любой другой        | `homepage.views.page_not_found`     | Кастомная 404                                 |
