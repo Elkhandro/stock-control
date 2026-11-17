@@ -170,8 +170,24 @@ def operation_list(request) -> HttpResponse:
     if sort not in OPERATION_SORT_FIELDS:
         sort = "date"
 
+    base_operations = Operation.objects.all()
+    if status == "active":
+        base_operations = Operation.objects.active()
+    elif status == "cancelled":
+        base_operations = Operation.objects.cancelled()
+    elif status == "completed":
+        base_operations = Operation.objects.completed()
+
+    if operation_date:
+        try:
+            selected_date = datetime.strptime(operation_date, "%Y-%m-%d").date()
+        except ValueError:
+            error = "Укажите корректную дату."
+        else:
+            base_operations = base_operations.for_date(selected_date)
+
     operations_data = (
-        Operation.objects
+        base_operations
         .annotate(
             product_name=F("product__name"),
             article=F("product__article"),
@@ -182,22 +198,6 @@ def operation_list(request) -> HttpResponse:
             "operation_type", "quantity", "operation_date", "comment", "status",
         )
     )
-
-    # Несколько filter() подряд работают как «И».
-    if status == "active":
-        operations_data = operations_data.filter(status="active")
-    elif status == "cancelled":
-        operations_data = operations_data.filter(status="cancelled")
-    elif status == "completed":
-        operations_data = operations_data.filter(status="completed")
-
-    if operation_date:
-        try:
-            selected_date = datetime.strptime(operation_date, "%Y-%m-%d").date()
-        except ValueError:
-            error = "Укажите корректную дату."
-        else:
-            operations_data = operations_data.filter(operation_date=selected_date)
 
     if _is_int(selected_product):
         operations_data = operations_data.filter(product_id=int(selected_product))
