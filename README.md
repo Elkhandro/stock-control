@@ -3,9 +3,13 @@
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
 
 ## Текущее состояние (ПР10)
-- ✅ Django Admin расширена для товаров и складских операций
-- ✅ Типы операций используют `TextChoices`, статус вычисляется из существующего флага отмены
-- ✅ У товаров есть автоматически формируемый slug и вычисляемая стоимость остатка в БД
+- ✅ Django Admin: inline операций, actions, list_editable, autocomplete_fields, аннотация активных операций и сортируемый статус
+- ✅ Django Debug Toolbar подключается при DJANGO_DEBUG=1
+- ✅ Группа Warehouse Operators создаётся миграцией с ограниченными правами
+- ✅ Operation.status — CharField с TextChoices ACTIVE/CANCELLED/COMPLETED; миграция переносит данные и удаляет is_cancelled
+- ✅ OperationQuerySet: active(), cancelled(), completed(), for_date()
+- ✅ Slug транслитерируется через Unidecode; get_absolute_url() применяется в шаблонах
+- ✅ У товаров есть вычисляемая стоимость остатка в БД
 - ✅ Общий контекст склада вынесен в context processor
 - ✅ Добавлены миграция, ORM-тесты и материалы к защите ПР10
 
@@ -85,7 +89,7 @@
 | quantity | PositiveIntegerField | + `CheckConstraint(quantity > 0)` |
 | operation_date | DateField | дата операции |
 | comment | CharField(255) | необязательный |
-| is_cancelled | BooleanField | по умолчанию `False` |
+| status | CharField(10) | `ACTIVE`, `CANCELLED`, `COMPLETED` |
 
 Метод `cancel()` помечает операцию отменённой. `Meta`: `ordering = ["-operation_date", "-pk"]`.
 
@@ -114,8 +118,7 @@
 | Аннотирование | `operation_statistics` | `values("category").annotate(Count, Sum)`, `values("operation_type").annotate(...)` |
 | Пагинация | `operation_list` | `Paginator(..., 5).get_page(page)` + `{% querystring %}` |
 
-Статистика по товарам строится от `Product`, поэтому товары без операций не выпадают;
-отменённые операции в статистике не учитываются.
+Статистика по товарам строится от `Product`, поэтому товары без операций не выпадают; отменённые и завершённые операции не считаются активными.
 
 ### Регистронезависимый поиск по кириллице
 
@@ -482,7 +485,7 @@ stock-control/
 | `/`                 | `homepage.views.index`              | Главная: статистика, товары с низким остатком |
 | `/products/`        | `products.views.product_list`       | Список всех товаров                           |
 | `/products/<id>/`   | `products.views.product_detail`     | Старая числовая карточка товара               |
-| `/products/item/<slug>/` | `products.views.product_detail_by_slug` | Каноническая карточка товара по slug          |
+| `/products/item/<slug>/` | `products.views.product_detail` | Каноническая карточка товара по slug          |
 | `/operations/`      | `operations.views.operation_list`   | История операций                              |
 | `/operations/<id>/` | `operations.views.operation_detail` | Детали операции                               |
 | Любой другой        | `homepage.views.page_not_found`     | Кастомная 404                                 |
@@ -580,3 +583,17 @@ python manage.py migrate
 python -m pytest -v
 python manage.py runserver --insecure
 ```
+
+
+## ПР10 — расширенная реализация
+
+В складской предметной области модели Room/Booking из примера методички адаптированы к Product/Operation. Полный перечень доработок, миграций, DDT и демонстрации — в `PR10_REPORT.md`, `PR10_DEFENSE.md` и `PR10_shell_demo.md`.
+
+Debug Toolbar включается локально переменной окружения:
+
+```powershell
+$env:DJANGO_DEBUG="1"
+python manage.py runserver
+```
+
+Миграции ПР10 включают перенос статуса операций, backfill slug и создание группы Warehouse Operators.
