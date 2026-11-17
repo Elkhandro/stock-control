@@ -1,7 +1,8 @@
 # stock-control / Складской учёт
 
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
-
+$env:DJANGO_DEBUG="1"
+python manage.py runserver
 ## Текущее состояние (ПР10)
 - ✅ Django Admin: inline операций, actions, list_editable, autocomplete_fields, аннотация активных операций и сортируемый статус
 - ✅ Django Debug Toolbar подключается при DJANGO_DEBUG=1

@@ -12,7 +12,7 @@
         height="32"
         class="me-2"
       />
-      Складской учёт
+      {{ WAREHOUSE_NAME }}
     </a>
     <button
       class="navbar-toggler"
@@ -28,7 +28,7 @@
           <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'products:product_list' %}">Товары</a>
+          <a class="nav-link" href="{% url 'products:product_list' %}">Товары ({{ products_count }})</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'products:product_search' %}">🔍 Поиск</a>

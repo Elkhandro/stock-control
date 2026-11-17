@@ -8,7 +8,7 @@ from django.db.models import ProtectedError
 from django.test import TestCase
 from django.urls import reverse
 
-from operations.models import ISSUE, RECEIPT, Operation
+from operations.models import ISSUE, RECEIPT, Operation, OperationStatus
 from products.models import Product
 
 
@@ -23,7 +23,7 @@ def make_product(article="NB-001", name="Ноутбук Lenovo", category="Эл�
 def make_operation(product, op_type=RECEIPT, quantity=10, day=15, cancelled=False):
     return Operation.objects.create(
         product=product, operation_type=op_type, quantity=quantity,
-        operation_date=date(2026, 9, day), comment="", status=("cancelled" if cancelled else "active"),
+        operation_date=date(2026, 9, day), comment="", status=(OperationStatus.CANCELLED if cancelled else OperationStatus.ACTIVE),
     )
 
 
@@ -145,7 +145,7 @@ class QueryTests(TestCase):
         stats = {
             row["name"]: row["operations_count"]
             for row in Product.objects.annotate(
-                operations_count=Count("operations", filter=Q(operations__status="active"))
+                operations_count=Count("operations", filter=Q(operations__status=OperationStatus.ACTIVE))
             ).values("name", "operations_count")
         }
         self.assertEqual(stats, {"Ноутбук Lenovo": 1, "Мышь Defender": 1, "Кабель HDMI": 0})

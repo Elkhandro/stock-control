@@ -33,6 +33,42 @@
     </div>
 </div>
 
+
+<h3 class="mt-4">Операции по статусам</h3>
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-bg-secondary">
+            <div class="card-body">
+                <h6 class="card-title">Всего операций</h6>
+                <p class="display-6">{{ status_stats.total_operations }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-primary">
+            <div class="card-body">
+                <h6 class="card-title">Активных</h6>
+                <p class="display-6">{{ status_stats.active_operations }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-danger">
+            <div class="card-body">
+                <h6 class="card-title">Отменённых</h6>
+                <p class="display-6">{{ status_stats.cancelled_operations }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-bg-success">
+            <div class="card-body">
+                <h6 class="card-title">Завершённых</h6>
+                <p class="display-6">{{ status_stats.completed_operations }}</p>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Статистика по категориям -->
 <h3 class="mt-4">По категориям</h3>
 {% if category_stats %}

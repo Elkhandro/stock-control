@@ -70,5 +70,14 @@
         "operation_date": "11.11.2026",
         "comment": "",
         "is_cancelled": false
+    },
+    {
+        "id": 9,
+        "product_id": 5,
+        "operation_type": "расход",
+        "quantity": 10,
+        "operation_date": "15.11.2026",
+        "comment": "",
+        "is_cancelled": false
     }
 ]

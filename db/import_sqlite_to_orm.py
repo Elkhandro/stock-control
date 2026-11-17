@@ -74,7 +74,11 @@ def import_data() -> None:
                     "quantity": row["quantity"],
                     "operation_date": parse_date(row["operation_date"]),
                     "comment": row["comment"] or "",
-                    "is_cancelled": bool(row["is_cancelled"]),
+                    "status": (
+                        Operation.Status.CANCELLED
+                        if row["is_cancelled"]
+                        else Operation.Status.ACTIVE
+                    ),
                 },
             )
 

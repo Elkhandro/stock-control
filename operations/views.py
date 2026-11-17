@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from storage import load_products, load_operations, save_operations, save_products
 from models.operation import RECEIPT, ISSUE
 from services.operation_service import create_operation
-from operations.models import OPERATION_TYPE_CHOICES, Operation
+from operations.models import OPERATION_TYPE_CHOICES, Operation, OperationStatus
 from products.models import Product
 
 
@@ -148,7 +148,13 @@ OPERATION_SORT_FIELDS = {
     "product": ("product__name", "id"),
     "type": ("operation_type", "id"),
 }
-STATUS_CHOICES = ("active", "cancelled", "completed", "all")
+
+STATUS_FILTERS = {
+    "active": OperationStatus.ACTIVE,
+    "cancelled": OperationStatus.CANCELLED,
+    "completed": OperationStatus.COMPLETED,
+    "all": None,
+}
 
 
 def _is_int(value: str) -> bool:
@@ -165,18 +171,15 @@ def operation_list(request) -> HttpResponse:
     status = request.GET.get("status", "active")
     sort = request.GET.get("sort", "date")
 
-    if status not in STATUS_CHOICES:
+    if status not in STATUS_FILTERS:
         status = "active"
     if sort not in OPERATION_SORT_FIELDS:
         sort = "date"
 
     base_operations = Operation.objects.all()
-    if status == "active":
-        base_operations = Operation.objects.active()
-    elif status == "cancelled":
-        base_operations = Operation.objects.cancelled()
-    elif status == "completed":
-        base_operations = Operation.objects.completed()
+    status_value = STATUS_FILTERS[status]
+    if status_value is not None:
+        base_operations = base_operations.filter(status=status_value)
 
     if operation_date:
         try:
@@ -237,11 +240,23 @@ def operation_detail(request, pk: int) -> HttpResponse:
 def operation_statistics(request) -> HttpResponse:
     """[ORM] Статистика склада: сводка, категории, операции по товарам и типам."""
     active_operations = Operation.objects.active()
+    status_stats = Operation.objects.aggregate(
+        total_operations=Count("id"),
+        active_operations=Count(
+            "id", filter=Q(status=OperationStatus.ACTIVE)
+        ),
+        cancelled_operations=Count(
+            "id", filter=Q(status=OperationStatus.CANCELLED)
+        ),
+        completed_operations=Count(
+            "id", filter=Q(status=OperationStatus.COMPLETED)
+        ),
+    )
 
     # Статистика строится от Product, поэтому товары без операций не выпадают.
     product_stats = (
         Product.objects
-        .annotate(operations_count=Count("operations", filter=Q(operations__status="active")))
+        .annotate(operations_count=Count("operations", filter=Q(operations__status=OperationStatus.ACTIVE)))
         .values("name", "article", "operations_count")
         .order_by("-operations_count", "name")
     )
@@ -274,4 +289,5 @@ def operation_statistics(request) -> HttpResponse:
         "product_stats": product_stats,
         "type_stats": type_stats,
         "idle_products": idle_products,
+        "status_stats": status_stats,
     })
