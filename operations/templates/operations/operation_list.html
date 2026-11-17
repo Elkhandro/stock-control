@@ -46,6 +46,7 @@
         <select id="f-status" name="status" class="form-select">
             <option value="active" {% if status == "active" %}selected{% endif %}>Активные</option>
             <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Отменённые</option>
+            <option value="completed" {% if status == "completed" %}selected{% endif %}>Завершённые</option>
             <option value="all" {% if status == "all" %}selected{% endif %}>Все</option>
         </select>
     </div>
@@ -81,7 +82,7 @@
         </thead>
         <tbody>
             {% for operation in operations %}
-            <tr class="{% if operation.is_cancelled %}table-secondary{% endif %}">
+            <tr class="{% if operation.status == "cancelled" %}table-secondary{% endif %}">
                 <td>
                     <a href="{% url 'operations:operation_detail' operation.id %}">
                         {{ operation.id }}
