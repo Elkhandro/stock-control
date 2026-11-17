@@ -8,7 +8,7 @@ from operations.models import Operation, OperationStatus
 class OperationAdmin(admin.ModelAdmin):
     list_display = (
         "id", "product", "operation_type", "quantity", "operation_date",
-        "status_label",
+        "status",
     )
     list_filter = ("operation_type", "status", "operation_date")
     search_fields = ("product__name", "product__article", "comment")
@@ -19,10 +19,6 @@ class OperationAdmin(admin.ModelAdmin):
     list_per_page = 25
     list_editable = ("status",)
     actions = ("cancel_operations", "complete_operations", "restore_operations")
-
-    @admin.display(description="Статус", ordering="status")
-    def status_label(self, obj):
-        return obj.get_status_display()
 
     @admin.action(description="Отменить выбранные операции")
     def cancel_operations(self, request, queryset):
