@@ -23,7 +23,7 @@ def make_product(article="NB-001", name="Ноутбук Lenovo", category="Эл�
 def make_operation(product, op_type=RECEIPT, quantity=10, day=15, cancelled=False):
     return Operation.objects.create(
         product=product, operation_type=op_type, quantity=quantity,
-        operation_date=date(2026, 9, day), comment="", is_cancelled=cancelled,
+        operation_date=date(2026, 9, day), comment="", status=("cancelled" if cancelled else "active"),
     )
 
 
@@ -67,7 +67,7 @@ class ModelTests(TestCase):
         operation = make_operation(make_product())
         self.assertTrue(operation.cancel())
         operation.refresh_from_db()
-        self.assertTrue(operation.is_cancelled)
+        self.assertEqual(operation.status, Operation.Status.CANCELLED)
         self.assertFalse(operation.cancel())
 
     def test_quantity_must_be_positive(self):
@@ -126,7 +126,7 @@ class QueryTests(TestCase):
         self.assertEqual(ops.count(), 1)
 
     def test_exclude_products_with_active_operations(self):
-        active_ids = Operation.objects.filter(is_cancelled=False).values_list(
+        active_ids = Operation.objects.active().values_list(
             "product_id", flat=True
         )
         idle = Product.objects.exclude(pk__in=active_ids)
@@ -138,7 +138,7 @@ class QueryTests(TestCase):
         stats = {
             row["name"]: row["operations_count"]
             for row in Product.objects.annotate(
-                operations_count=Count("operations", filter=Q(operations__is_cancelled=False))
+                operations_count=Count("operations", filter=Q(operations__status="active"))
             ).values("name", "operations_count")
         }
         self.assertEqual(stats, {"Ноутбук Lenovo": 1, "Мышь Defender": 1, "Кабель HDMI": 0})
