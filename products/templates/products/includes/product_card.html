@@ -1,5 +1,5 @@
 <tr>
-    <td><a href="{{ product.get_absolute_url }}">{{ product.id }}</a></td>
+    <td>{% if product.slug %}<a href="{{ product.get_absolute_url }}">{{ product.id }}</a>{% else %}{{ product.id }}{% endif %}</td>
     <td>{{ product.name|default:"Без названия" }}</td>
     <td><code>{{ product.article }}</code></td>
     <td>{{ product.category }}</td>
@@ -11,5 +11,5 @@
         {% endif %}
     </td>
     <td>{{ product.price|floatformat:2 }} ₽</td>
-    <td>{{ product.total_value|floatformat:2 }} ₽</td>
+    <td>{% if product.total_value != None %}{{ product.total_value|floatformat:2 }}{% else %}{{ product.get_total_value|floatformat:2 }}{% endif %} ₽</td>
 </tr>
