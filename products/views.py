@@ -189,3 +189,14 @@ def product_search(request) -> HttpResponse:
         "categories": categories,
         "searched": searched,
     })
+
+
+
+def product_detail_by_slug(request, slug: str) -> HttpResponse:
+    """[ORM] Каноническая карточка товара по уникальному slug."""
+    product = get_object_or_404(Product, slug=slug)
+    operations = product.operations.order_by("-operation_date", "-pk")
+    return render(request, "products/product_detail.html", {
+        "product": product,
+        "operations": operations,
+    })
