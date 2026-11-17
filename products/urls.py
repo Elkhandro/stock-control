@@ -16,4 +16,7 @@ urlpatterns = [
     # JSON-версии (сохранены, доступны по отдельным URL)
     path("json/", views.product_list_json, name="product_list_json"),
     path("json/<int:product_id>/", views.product_detail_json, name="product_detail_json"),
+
+    # Канонический URL карточки товара по slug (числовой URL ПР9 сохранён).
+    path("item/<slug:slug>/", views.product_detail_by_slug, name="product_detail_slug"),
 ]
