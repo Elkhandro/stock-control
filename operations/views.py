@@ -148,7 +148,7 @@ OPERATION_SORT_FIELDS = {
     "product": ("product__name", "id"),
     "type": ("operation_type", "id"),
 }
-STATUS_CHOICES = ("active", "cancelled", "all")
+STATUS_CHOICES = ("active", "cancelled", "completed", "all")
 
 
 def _is_int(value: str) -> bool:
@@ -179,15 +179,17 @@ def operation_list(request) -> HttpResponse:
         )
         .values(
             "id", "product_id", "product_name", "article", "unit",
-            "operation_type", "quantity", "operation_date", "comment", "is_cancelled",
+            "operation_type", "quantity", "operation_date", "comment", "status",
         )
     )
 
     # Несколько filter() подряд работают как «И».
     if status == "active":
-        operations_data = operations_data.filter(is_cancelled=False)
+        operations_data = operations_data.filter(status="active")
     elif status == "cancelled":
-        operations_data = operations_data.filter(is_cancelled=True)
+        operations_data = operations_data.filter(status="cancelled")
+    elif status == "completed":
+        operations_data = operations_data.filter(status="completed")
 
     if operation_date:
         try:
@@ -233,12 +235,12 @@ def operation_detail(request, pk: int) -> HttpResponse:
 
 def operation_statistics(request) -> HttpResponse:
     """[ORM] Статистика склада: сводка, категории, операции по товарам и типам."""
-    active_operations = Operation.objects.filter(is_cancelled=False)
+    active_operations = Operation.objects.active()
 
     # Статистика строится от Product, поэтому товары без операций не выпадают.
     product_stats = (
         Product.objects
-        .annotate(operations_count=Count("operations", filter=Q(operations__is_cancelled=False)))
+        .annotate(operations_count=Count("operations", filter=Q(operations__status="active")))
         .values("name", "article", "operations_count")
         .order_by("-operations_count", "name")
     )
