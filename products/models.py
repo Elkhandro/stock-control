@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import Count, DecimalField, F, Sum
 from django.urls import reverse
 from django.utils.text import slugify
+from unidecode import unidecode
 
 LOW_STOCK_THRESHOLD = 10
 
@@ -40,7 +41,7 @@ class Product(models.Model):
     price = models.DecimalField(
         "Цена за единицу", max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
-    stock = models.PositiveIntegerField("Остаток", default=0)
+    stock = models.PositiveIntegerField("Остаток", default=0, help_text="Текущее количество единиц на складе.")
     slug = models.SlugField("URL-идентификатор", max_length=220, blank=True, unique=True)
     total_value = models.GeneratedField(
         expression=F("price") * F("stock"),
@@ -65,8 +66,8 @@ class Product(models.Model):
         if not self.slug and creating:
             super().save(*args, **kwargs)
         if not self.slug:
-            name_part = slugify(self.name, allow_unicode=False) or "product"
-            article_part = slugify(self.article, allow_unicode=False) or "item"
+            name_part = slugify(unidecode(self.name), allow_unicode=False) or "product"
+            article_part = slugify(unidecode(self.article), allow_unicode=False) or "item"
             suffix = f"-{self.pk}"
             base = f"{name_part}-{article_part}"
             self.slug = f"{base[:220 - len(suffix)]}{suffix}"
