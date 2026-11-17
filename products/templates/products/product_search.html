@@ -40,7 +40,7 @@
                         <p class="card-text">Артикул: {{ product.article }}</p>
                         <p class="card-text">Категория: {{ product.category|default:"—" }}</p>
                         <p class="card-text fw-bold stock-status">Остаток: {{ product.stock }} {{ product.unit }}</p>
-                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">Подробнее</a>
+                        <a href="{{ product.get_absolute_url }}" class="btn btn-sm btn-outline-primary">Подробнее</a>
                     </div>
                 </div>
             </div>
