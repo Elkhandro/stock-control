@@ -69,7 +69,7 @@ class Product(models.Model):
             article_part = slugify(self.article, allow_unicode=False) or "item"
             suffix = f"-{self.pk}"
             base = f"{name_part}-{article_part}"
-            self.slug = f"{base[:220 - len(suffix)]}{suffix}
+            self.slug = f"{base[:220 - len(suffix)]}{suffix}"
             if creating:
                 super().save(update_fields=["slug"])
                 return
