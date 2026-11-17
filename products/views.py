@@ -146,9 +146,10 @@ def product_list(request) -> HttpResponse:
     })
 
 
-def product_detail(request, pk: int) -> HttpResponse:
-    """[ORM] Карточка товара + история его операций (обратная связь product.operations)."""
-    product = get_object_or_404(Product, pk=pk)
+def product_detail(request, pk: int = None, slug: str = None) -> HttpResponse:
+    """[ORM] Единое представление карточки товара по ID (legacy) или slug."""
+    lookup = {"slug": slug} if slug is not None else {"pk": pk}
+    product = get_object_or_404(Product, **lookup)
     operations = product.operations.order_by("-operation_date", "-pk")
     return render(request, "products/product_detail.html", {
         "product": product,
@@ -191,12 +192,3 @@ def product_search(request) -> HttpResponse:
     })
 
 
-
-def product_detail_by_slug(request, slug: str) -> HttpResponse:
-    """[ORM] Каноническая карточка товара по уникальному slug."""
-    product = get_object_or_404(Product, slug=slug)
-    operations = product.operations.order_by("-operation_date", "-pk")
-    return render(request, "products/product_detail.html", {
-        "product": product,
-        "operations": operations,
-    })
