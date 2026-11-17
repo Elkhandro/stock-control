@@ -46,7 +46,7 @@
                     <tr><th>Цена:</th><td>{{ product.price|floatformat:2 }} ₽</td></tr>
                     <tr>
                         <th>Стоимость остатка:</th>
-                        <td>{{ product.price|floatformat:2 }} × {{ product.stock }} = {{ product.total_value|floatformat:2 }} ₽</td>
+                        <td>{{ product.get_total_value|floatformat:2 }} ₽</td>
                     </tr>
                 </table>
             </div>
