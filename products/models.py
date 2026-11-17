@@ -65,8 +65,8 @@ class Product(models.Model):
         if not self.slug and creating:
             super().save(*args, **kwargs)
         if not self.slug:
-            name_part = slugify(self.name, allow_unicode=True) or "product"
-            article_part = slugify(self.article, allow_unicode=True) or "item"
+            name_part = slugify(self.name, allow_unicode=False) or "product"
+            article_part = slugify(self.article, allow_unicode=False) or "item"
             self.slug = f"{name_part}-{article_part}-{self.pk}"[:220]
             if creating:
                 super().save(update_fields=["slug"])
