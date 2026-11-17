@@ -35,7 +35,7 @@ CI workflow выполняет:
 - python manage.py makemigrations --check --dry-run --verbosity 3;
 - python -m pytest -v.
 
-Фактический итог последнего CI-прогона будет указан после завершения workflow. Результаты локального запуска и снимки экрана пользователя здесь не имитируются.
+Последний GitHub Actions workflow завершился успешно: `python manage.py check` — без ошибок; `DJANGO_DEBUG=1 python manage.py check` — без ошибок; `python manage.py makemigrations --check --dry-run --verbosity 3` — без новых миграций; `python -m pytest -v` — 61 passed, 16 subtests passed. Это CI-результат, не запуск на локальном компьютере владельца. Снимки экрана локальной админки и SQL-панели DDT необходимо сделать на машине владельца проекта.
 
 ## Локальная демонстрация и скриншоты
 
