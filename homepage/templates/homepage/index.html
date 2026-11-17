@@ -3,7 +3,7 @@
 {% block title %}Главная — Складской учёт{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">🏭 Центральный склад</h1>
+<h1 class="mb-4">🏭 {{ WAREHOUSE_NAME }}</h1>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
@@ -39,13 +39,13 @@
 
 <div class="card border-danger mb-4">
     <div class="card-header bg-danger text-white">
-        ⚠️ Товары с низким остатком (&lt; 10 шт.)
+        ⚠️ Товары с низким остатком (&lt; {{ LOW_STOCK_THRESHOLD }} шт.)
     </div>
     <ul class="list-group list-group-flush">
         {% for product in low_stock_products %}
         
         <li class="list-group-item d-flex justify-content-between align-items-center">
-            <a href="{% url 'products:product_detail' product.id %}">{{ product.name }}</a>
+            <a href="{{ product.get_absolute_url }}">{{ product.name }}</a>
             <span class="badge bg-danger">{{ product.stock }} {{ product.unit }}</span>
         </li>
         {% endfor %}
