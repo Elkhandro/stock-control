@@ -34,5 +34,13 @@ class Migration(migrations.Migration):
             model_name="operation",
             name="is_cancelled",
         ),
+        migrations.AlterField(
+            model_name="operation",
+            name="quantity",
+            field=models.PositiveIntegerField(
+                help_text="Количество единиц в операции; должно быть больше нуля.",
+                verbose_name="Количество",
+            ),
+        ),
     ]
 }
