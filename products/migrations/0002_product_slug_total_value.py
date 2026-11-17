@@ -7,10 +7,10 @@ from django.utils.text import slugify
 def populate_product_slugs(apps, schema_editor):
     Product = apps.get_model('products', 'Product')
     for product in Product.objects.all().only('pk', 'name', 'article').iterator():
-        name_part = slugify(product.name) or 'product'
-        article_part = slugify(product.article) or f'item-{product.pk}'
+        name_part = slugify(product.name, allow_unicode=True) or 'product'
+        article_part = slugify(product.article, allow_unicode=True) or 'item'
         Product.objects.filter(pk=product.pk).update(
-            slug=f'{name_part}-{article_part}'[:220]
+            slug=f'{name_part}-{article_part}-{product.pk}'[:220]
         )
 
 
@@ -26,12 +26,21 @@ class Migration(migrations.Migration):
             name="slug",
             field=models.SlugField(
                 blank=True,
-                db_index=True,
                 max_length=220,
                 verbose_name="URL-идентификатор",
             ),
         ),
         migrations.RunPython(populate_product_slugs, migrations.RunPython.noop),
+        migrations.AlterField(
+            model_name="product",
+            name="slug",
+            field=models.SlugField(
+                blank=True,
+                max_length=220,
+                unique=True,
+                verbose_name="URL-идентификатор",
+            ),
+        ),
         migrations.AddField(
             model_name="product",
             name="total_value",
