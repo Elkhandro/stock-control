@@ -27,13 +27,14 @@ OPERATION_TYPE_CHOICES = OperationType.choices
 
 
 class Operation(models.Model):
-    Status = OperationStatus
     """Складская операция (приход или расход товара).
 
     ``on_delete=PROTECT`` — товар, по которому есть история операций,
     нельзя удалить случайно: история движения товара сохраняется.
     ``related_name="operations"`` — обратный доступ ``product.operations.all()``.
     """
+
+    Status = OperationStatus
 
     product = models.ForeignKey(
         Product,
