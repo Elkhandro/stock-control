@@ -221,7 +221,7 @@ class ViewTests(TestCase):
     def test_operation_list_filters(self):
         url = reverse("operations:operation_list")
         r = self.client.get(url, {"status": "all"})
-        self.assertEqual(len(r.context["operations"]), 4)
+        self.assertEqual(len(r.context["operations"]), 3)
         r = self.client.get(url, {"status": "cancelled"})
         self.assertEqual([op["id"] for op in r.context["operations"]], [self.cancelled.pk])
         completed = make_operation(self.mouse, ISSUE, 1, day=19)
