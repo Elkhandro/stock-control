@@ -7,8 +7,8 @@ from django.utils.text import slugify
 def populate_product_slugs(apps, schema_editor):
     Product = apps.get_model('products', 'Product')
     for product in Product.objects.all().only('pk', 'name', 'article').iterator():
-        name_part = slugify(product.name, allow_unicode=True) or 'product'
-        article_part = slugify(product.article, allow_unicode=True) or 'item'
+        name_part = slugify(product.name, allow_unicode=False) or 'product'
+        article_part = slugify(product.article, allow_unicode=False) or 'item'
         Product.objects.filter(pk=product.pk).update(
             slug=f'{name_part}-{article_part}-{product.pk}'[:220]
         )
