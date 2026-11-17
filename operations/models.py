@@ -85,6 +85,11 @@ class Operation(models.Model):
             ),
         ]
 
+    @property
+    def is_cancelled(self) -> bool:
+        """Совместимость со старыми JSON-шаблонами; в БД хранится status."""
+        return self.status == OperationStatus.CANCELLED
+
     def __str__(self) -> str:
         action = self.get_operation_type_display()
         return (
