@@ -5,7 +5,7 @@
     <span class="badge bg-warning text-dark">Расход</span>
     {% endif %}
 {% else %}
-    {% if operation.status == "cancelled" %}
+    {% if operation.status == "cancelled" or operation.is_cancelled %}
     <span class="badge bg-secondary stock-status">отменена</span>
     {% else %}
     {% if operation.status == "completed" %}
