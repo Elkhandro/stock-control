@@ -24,7 +24,7 @@
             <tr>
                 <th width="30%">Товар:</th>
                 <td>
-                    <a href="{% url 'products:product_detail' operation.product.id %}">
+                    <a href="{% if operation.product.slug %}{{ operation.product.get_absolute_url }}{% else %}{% url 'products:product_detail' operation.product.id %}{% endif %}">
                         {{ operation.product.name }}
                     </a>
                     <small class="text-muted">({{ operation.product.article }})</small>

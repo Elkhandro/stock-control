@@ -148,7 +148,7 @@ OPERATION_SORT_FIELDS = {
     "product": ("product__name", "id"),
     "type": ("operation_type", "id"),
 }
-STATUS_CHOICES = ("active", "cancelled", "all")
+STATUS_CHOICES = ("active", "cancelled", "completed", "all")
 
 
 def _is_int(value: str) -> bool:
@@ -170,24 +170,13 @@ def operation_list(request) -> HttpResponse:
     if sort not in OPERATION_SORT_FIELDS:
         sort = "date"
 
-    operations_data = (
-        Operation.objects
-        .annotate(
-            product_name=F("product__name"),
-            article=F("product__article"),
-            unit=F("product__unit"),
-        )
-        .values(
-            "id", "product_id", "product_name", "article", "unit",
-            "operation_type", "quantity", "operation_date", "comment", "is_cancelled",
-        )
-    )
-
-    # Несколько filter() подряд работают как «И».
+    base_operations = Operation.objects.all()
     if status == "active":
-        operations_data = operations_data.filter(is_cancelled=False)
+        base_operations = Operation.objects.active()
     elif status == "cancelled":
-        operations_data = operations_data.filter(is_cancelled=True)
+        base_operations = Operation.objects.cancelled()
+    elif status == "completed":
+        base_operations = Operation.objects.completed()
 
     if operation_date:
         try:
@@ -195,7 +184,21 @@ def operation_list(request) -> HttpResponse:
         except ValueError:
             error = "Укажите корректную дату."
         else:
-            operations_data = operations_data.filter(operation_date=selected_date)
+            base_operations = base_operations.for_date(selected_date)
+
+    operations_data = (
+        base_operations
+        .annotate(
+            product_name=F("product__name"),
+            product_slug=F("product__slug"),
+            article=F("product__article"),
+            unit=F("product__unit"),
+        )
+        .values(
+            "id", "product_id", "product_name", "product_slug", "article", "unit",
+            "operation_type", "quantity", "operation_date", "comment", "status",
+        )
+    )
 
     if _is_int(selected_product):
         operations_data = operations_data.filter(product_id=int(selected_product))
@@ -233,12 +236,12 @@ def operation_detail(request, pk: int) -> HttpResponse:
 
 def operation_statistics(request) -> HttpResponse:
     """[ORM] Статистика склада: сводка, категории, операции по товарам и типам."""
-    active_operations = Operation.objects.filter(is_cancelled=False)
+    active_operations = Operation.objects.active()
 
     # Статистика строится от Product, поэтому товары без операций не выпадают.
     product_stats = (
         Product.objects
-        .annotate(operations_count=Count("operations", filter=Q(operations__is_cancelled=False)))
+        .annotate(operations_count=Count("operations", filter=Q(operations__status="active")))
         .values("name", "article", "operations_count")
         .order_by("-operations_count", "name")
     )

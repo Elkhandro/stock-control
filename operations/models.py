@@ -16,10 +16,31 @@ class OperationType(models.TextChoices):
 
 
 class OperationStatus(models.TextChoices):
-    """Состояние записи складской операции."""
+    """Состояния складской операции."""
 
     ACTIVE = "active", "Активна"
     CANCELLED = "cancelled", "Отменена"
+    COMPLETED = "completed", "Завершена"
+
+
+class OperationQuerySet(models.QuerySet):
+    """Переиспользуемые выборки операций склада."""
+
+    def active(self):
+        return self.filter(status=OperationStatus.ACTIVE)
+
+    def cancelled(self):
+        return self.filter(status=OperationStatus.CANCELLED)
+
+    def completed(self):
+        return self.filter(status=OperationStatus.COMPLETED)
+
+    def for_date(self, day):
+        return self.filter(operation_date=day)
+
+
+class OperationManager(models.Manager.from_queryset(OperationQuerySet)):
+    """Менеджер складских операций."""
 
 
 RECEIPT = OperationType.RECEIPT
@@ -46,10 +67,12 @@ class Operation(models.Model):
     operation_type = models.CharField(
         "Тип операции", max_length=10, choices=OperationType.choices
     )
-    quantity = models.PositiveIntegerField("Количество")
+    quantity = models.PositiveIntegerField("Количество", help_text="Количество единиц в операции; должно быть больше нуля.")
     operation_date = models.DateField("Дата операции")
     comment = models.CharField("Комментарий", max_length=255, blank=True, default="")
-    is_cancelled = models.BooleanField("Отменена", default=False)
+    status = models.CharField("Статус", max_length=10, choices=OperationStatus.choices, default=OperationStatus.ACTIVE, db_index=True, help_text="Активна, отменена или завершена.")
+
+    objects = OperationManager()
 
     class Meta:
         ordering = ["-operation_date", "-pk"]
@@ -63,9 +86,9 @@ class Operation(models.Model):
         ]
 
     @property
-    def status(self) -> OperationStatus:
-        """Текстовый статус, вычисляемый из существующего флага отмены."""
-        return OperationStatus.CANCELLED if self.is_cancelled else OperationStatus.ACTIVE
+    def is_cancelled(self) -> bool:
+        """Совместимость со старыми JSON-шаблонами; в БД хранится status."""
+        return self.status == OperationStatus.CANCELLED
 
     def __str__(self) -> str:
         action = self.get_operation_type_display()
@@ -80,8 +103,16 @@ class Operation(models.Model):
         Returns:
             True, если операция отменена сейчас, False — если уже была отменена.
         """
-        if self.is_cancelled:
+        if self.status == OperationStatus.CANCELLED:
             return False
-        self.is_cancelled = True
-        self.save(update_fields=["is_cancelled"])
+        self.status = OperationStatus.CANCELLED
+        self.save(update_fields=["status"])
+        return True
+
+    def complete(self) -> bool:
+        """Пометить операцию завершённой."""
+        if self.status == OperationStatus.COMPLETED:
+            return False
+        self.status = OperationStatus.COMPLETED
+        self.save(update_fields=["status"])
         return True

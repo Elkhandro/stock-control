@@ -19,7 +19,9 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Django system check
         run: python manage.py check
+      - name: Debug Toolbar configuration check
+        run: DJANGO_DEBUG=1 python manage.py check
       - name: Check migrations
-        run: python manage.py makemigrations --check
+        run: python manage.py makemigrations --check --dry-run --verbosity 3
       - name: Run tests
         run: python -m pytest -v

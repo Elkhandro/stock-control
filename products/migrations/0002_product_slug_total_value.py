@@ -2,13 +2,14 @@
 from django.db import migrations, models
 from django.db.models import F
 from django.utils.text import slugify
+from unidecode import unidecode
 
 
 def populate_product_slugs(apps, schema_editor):
     Product = apps.get_model('products', 'Product')
     for product in Product.objects.all().only('pk', 'name', 'article').iterator():
-        name_part = slugify(product.name, allow_unicode=False) or 'product'
-        article_part = slugify(product.article, allow_unicode=False) or 'item'
+        name_part = slugify(unidecode(product.name), allow_unicode=False) or 'product'
+        article_part = slugify(unidecode(product.article), allow_unicode=False) or 'item'
         suffix = f'-{product.pk}'
         base = f'{name_part}-{article_part}'
         Product.objects.filter(pk=product.pk).update(

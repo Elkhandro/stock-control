@@ -46,7 +46,7 @@
                     <tr><th>Цена:</th><td>{{ product.price|floatformat:2 }} ₽</td></tr>
                     <tr>
                         <th>Стоимость остатка:</th>
-                        <td>{{ product.get_total_value|floatformat:2 }} ₽</td>
+                        <td>{{ product.total_value|floatformat:2 }} ₽</td>
                     </tr>
                 </table>
             </div>
@@ -71,7 +71,7 @@
         </thead>
         <tbody>
             {% for op in operations %}
-            <tr class="{% if op.is_cancelled %}table-secondary{% endif %}">
+            <tr class="{% if op.status == "cancelled" %}table-secondary{% endif %}">
                 <td>
                     <a href="{% url 'operations:operation_detail' op.id %}">{{ op.id }}</a>
                 </td>

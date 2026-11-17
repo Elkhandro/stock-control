@@ -23,7 +23,7 @@ def make_product(article="NB-001", name="Ноутбук Lenovo", category="Эл�
 def make_operation(product, op_type=RECEIPT, quantity=10, day=15, cancelled=False):
     return Operation.objects.create(
         product=product, operation_type=op_type, quantity=quantity,
-        operation_date=date(2026, 9, day), comment="", is_cancelled=cancelled,
+        operation_date=date(2026, 9, day), comment="", status=("cancelled" if cancelled else "active"),
     )
 
 
@@ -37,6 +37,7 @@ class ModelTests(TestCase):
         product = make_product(name="Клавиатура Logitech", article="KB-101",
                                price="1250.50", stock=4)
         self.assertTrue(product.slug)
+        self.assertIn("klaviatura", product.slug)
         self.assertIn("kb-101", product.slug)
         self.assertEqual(product.get_absolute_url(), reverse(
             "products:product_detail_slug", kwargs={"slug": product.slug}
@@ -62,12 +63,17 @@ class ModelTests(TestCase):
         active.cancel()
         active.refresh_from_db()
         self.assertEqual(active.status, Operation.Status.CANCELLED)
+        self.assertEqual(Operation.objects.cancelled().count(), 1)
+        active.complete()
+        self.assertEqual(active.status, Operation.Status.COMPLETED)
+        self.assertEqual(Operation.objects.completed().count(), 1)
+        self.assertEqual(Operation.objects.for_date(date(2026, 9, 15)).count(), 1)
 
     def test_operation_cancel(self):
         operation = make_operation(make_product())
         self.assertTrue(operation.cancel())
         operation.refresh_from_db()
-        self.assertTrue(operation.is_cancelled)
+        self.assertEqual(operation.status, Operation.Status.CANCELLED)
         self.assertFalse(operation.cancel())
 
     def test_quantity_must_be_positive(self):
@@ -96,6 +102,7 @@ class QueryTests(TestCase):
         make_operation(self.laptop, RECEIPT, 10, day=15, cancelled=True)
         make_operation(self.laptop, ISSUE, 2, day=16)
         make_operation(self.mouse, RECEIPT, 7, day=17)
+        make_operation(self.mouse, ISSUE, 1, day=18, cancelled=True)
 
     def test_summary(self):
         summary = Product.objects.summary()
@@ -123,10 +130,10 @@ class QueryTests(TestCase):
 
     def test_filter_by_related_field(self):
         ops = Operation.objects.filter(product__category="Периферия")
-        self.assertEqual(ops.count(), 1)
+        self.assertEqual(ops.count(), 2)
 
     def test_exclude_products_with_active_operations(self):
-        active_ids = Operation.objects.filter(is_cancelled=False).values_list(
+        active_ids = Operation.objects.active().values_list(
             "product_id", flat=True
         )
         idle = Product.objects.exclude(pk__in=active_ids)
@@ -138,7 +145,7 @@ class QueryTests(TestCase):
         stats = {
             row["name"]: row["operations_count"]
             for row in Product.objects.annotate(
-                operations_count=Count("operations", filter=Q(operations__is_cancelled=False))
+                operations_count=Count("operations", filter=Q(operations__status="active"))
             ).values("name", "operations_count")
         }
         self.assertEqual(stats, {"Ноутбук Lenovo": 1, "Мышь Defender": 1, "Кабель HDMI": 0})
@@ -146,7 +153,7 @@ class QueryTests(TestCase):
     def test_select_related_single_query(self):
         with self.assertNumQueries(1):
             names = [op.product.name for op in Operation.objects.select_related("product")]
-        self.assertEqual(len(names), 3)
+        self.assertEqual(len(names), 4)
 
 
 class ViewTests(TestCase):
@@ -217,6 +224,10 @@ class ViewTests(TestCase):
         self.assertEqual(len(r.context["operations"]), 3)
         r = self.client.get(url, {"status": "cancelled"})
         self.assertEqual([op["id"] for op in r.context["operations"]], [self.cancelled.pk])
+        completed = make_operation(self.mouse, ISSUE, 1, day=19)
+        completed.complete()
+        r = self.client.get(url, {"status": "completed"})
+        self.assertEqual([op["id"] for op in r.context["operations"]], [completed.pk])
         r = self.client.get(url, {"product": str(self.mouse.pk)})
         self.assertEqual([op["id"] for op in r.context["operations"]], [self.op3.pk])
         r = self.client.get(url, {"type": "расход"})

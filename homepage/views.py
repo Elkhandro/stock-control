@@ -45,7 +45,7 @@ def index(request) -> HttpResponse:
     context = {
         "summary": Product.objects.summary(),
         "low_stock_products": low_stock,
-        "active_operations_count": Operation.objects.filter(is_cancelled=False).count(),
+        "active_operations_count": Operation.objects.active().count(),
     }
     return render(request, "homepage/index.html", context)
 
