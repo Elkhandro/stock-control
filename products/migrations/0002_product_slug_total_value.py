@@ -1,6 +1,17 @@
 # Generated for ПР10.
 from django.db import migrations, models
 from django.db.models import F
+from django.utils.text import slugify
+
+
+def populate_product_slugs(apps, schema_editor):
+    Product = apps.get_model('products', 'Product')
+    for product in Product.objects.all().only('pk', 'name', 'article').iterator():
+        name_part = slugify(product.name) or 'product'
+        article_part = slugify(product.article) or f'item-{product.pk}'
+        Product.objects.filter(pk=product.pk).update(
+            slug=f'{name_part}-{article_part}'[:220]
+        )
 
 
 class Migration(migrations.Migration):
@@ -20,6 +31,7 @@ class Migration(migrations.Migration):
                 verbose_name="URL-идентификатор",
             ),
         ),
+        migrations.RunPython(populate_product_slugs, migrations.RunPython.noop),
         migrations.AddField(
             model_name="product",
             name="total_value",
