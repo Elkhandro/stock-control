@@ -9,6 +9,8 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import Count, DecimalField, F, Sum
+from django.urls import reverse
+from django.utils.text import slugify
 
 LOW_STOCK_THRESHOLD = 10
 
@@ -39,6 +41,13 @@ class Product(models.Model):
         "Цена за единицу", max_digits=12, decimal_places=2, default=Decimal("0.00")
     )
     stock = models.PositiveIntegerField("Остаток", default=0)
+    slug = models.SlugField("URL-идентификатор", max_length=220, blank=True, db_index=True)
+    total_value = models.GeneratedField(
+        expression=F("price") * F("stock"),
+        output_field=DecimalField(max_digits=16, decimal_places=2),
+        db_persist=True,
+        verbose_name="Стоимость остатка",
+    )
 
     objects = ProductQuerySet.as_manager()
 
@@ -49,6 +58,18 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs) -> None:
+        """Автоматически формировать стабильный URL-slug из названия и артикула."""
+        if not self.slug:
+            name_part = slugify(self.name) or "product"
+            article_part = slugify(self.article) or "item"
+            self.slug = f"{name_part}-{article_part}"[:220]
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self) -> str:
+        """Каноническая ссылка на карточку товара."""
+        return reverse("products:product_detail", kwargs={"pk": self.pk})
 
     def get_total_value(self) -> Decimal:
         """Общая стоимость остатка товара (цена × остаток)."""
