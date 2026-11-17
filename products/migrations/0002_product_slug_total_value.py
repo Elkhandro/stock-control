@@ -9,8 +9,10 @@ def populate_product_slugs(apps, schema_editor):
     for product in Product.objects.all().only('pk', 'name', 'article').iterator():
         name_part = slugify(product.name, allow_unicode=False) or 'product'
         article_part = slugify(product.article, allow_unicode=False) or 'item'
+        suffix = f'-{product.pk}'
+        base = f'{name_part}-{article_part}'
         Product.objects.filter(pk=product.pk).update(
-            slug=f'{name_part}-{article_part}-{product.pk}'[:220]
+            slug=f'{base[:220 - len(suffix)]}{suffix}'
         )
 
 
