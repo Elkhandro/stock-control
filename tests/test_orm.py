@@ -39,8 +39,9 @@ class ModelTests(TestCase):
         self.assertTrue(product.slug)
         self.assertIn("kb-101", product.slug)
         self.assertEqual(product.get_absolute_url(), reverse(
-            "products:product_detail", args=[product.pk]
+            "products:product_detail_slug", kwargs={"slug": product.slug}
         ))
+        self.assertEqual(self.client.get(product.get_absolute_url()).status_code, 200)
         product.refresh_from_db()
         self.assertEqual(product.total_value, Decimal("5002.00"))
 
