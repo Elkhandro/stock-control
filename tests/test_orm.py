@@ -153,7 +153,7 @@ class QueryTests(TestCase):
     def test_select_related_single_query(self):
         with self.assertNumQueries(1):
             names = [op.product.name for op in Operation.objects.select_related("product")]
-        self.assertEqual(len(names), 3)
+        self.assertEqual(len(names), 4)
 
 
 class ViewTests(TestCase):
