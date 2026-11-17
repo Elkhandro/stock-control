@@ -195,7 +195,7 @@ def operation_list(request) -> HttpResponse:
             unit=F("product__unit"),
         )
         .values(
-            "id", "product_id", "product_name", "article", "unit",
+            "id", "product_id", "product_name", "product_slug", "article", "unit",
             "operation_type", "quantity", "operation_date", "comment", "status",
         )
     )
