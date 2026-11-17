@@ -2,6 +2,13 @@
 
 Консольное приложение и веб-интерфейс для учёта остатков товаров на складе.
 
+## Текущее состояние (ПР10)
+- ✅ Django Admin расширена для товаров и складских операций
+- ✅ Типы операций используют `TextChoices`, статус вычисляется из существующего флага отмены
+- ✅ У товаров есть автоматически формируемый slug и вычисляемая стоимость остатка в БД
+- ✅ Общий контекст склада вынесен в context processor
+- ✅ Добавлены миграция, ORM-тесты и материалы к защите ПР10
+
 ## Текущее состояние (ПР9)
 - ✅ Доступ к данным переведён с прямых SQL-запросов (`sqlite3`, ПР7) на **Django ORM**
 - ✅ Модели `Product` и `Operation`, миграции в `products/migrations/` и `operations/migrations/`
@@ -474,7 +481,8 @@ stock-control/
 | ------------------- | ----------------------------------- | --------------------------------------------- |
 | `/`                 | `homepage.views.index`              | Главная: статистика, товары с низким остатком |
 | `/products/`        | `products.views.product_list`       | Список всех товаров                           |
-| `/products/<id>/`   | `products.views.product_detail`     | Карточка товара                               |
+| `/products/<id>/`   | `products.views.product_detail`     | Старая числовая карточка товара               |
+| `/products/item/<slug>/` | `products.views.product_detail_by_slug` | Каноническая карточка товара по slug          |
 | `/operations/`      | `operations.views.operation_list`   | История операций                              |
 | `/operations/<id>/` | `operations.views.operation_detail` | Детали операции                               |
 | Любой другой        | `homepage.views.page_not_found`     | Кастомная 404                                 |
@@ -550,3 +558,25 @@ git status
 - разработка API;
 - контейнеризация приложения;
 - настройка CI/CD.
+
+
+## Практическая работа №10 (ПР10)
+
+ПР10 продолжает складской проект после ПР9. Возможности предметной области бронирования из стороннего шаблона задания адаптированы к сущностям склада.
+
+- Админка: поиск, фильтрация, сортировка и постраничный вывод товаров и операций.
+- `OperationType` и `OperationStatus`: типы операций оформлены через `TextChoices`, статус вычисляется из `is_cancelled`.
+- `Product.slug` и `get_absolute_url()`: формирование ссылки на карточку товара. Старые числовые URL сохранены.
+- `Product.total_value`: вычисляемое поле БД `price * stock`.
+- `homepage.context_processors.warehouse_context`: общие переменные склада доступны шаблонам.
+- Миграция `products.0002_product_slug_total_value` добавляет поля и заполняет slug для уже существующих товаров.
+
+Материалы работы: `PR10_REPORT.md`, `PR10_DEFENSE.md`, `PR10_shell_demo.md`.
+
+Для применения обновлений сначала сделайте копию `db.sqlite3`, затем выполните:
+
+```bash
+python manage.py migrate
+python -m pytest -v
+python manage.py runserver --insecure
+```

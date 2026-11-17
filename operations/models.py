@@ -7,12 +7,24 @@ from django.db import models
 
 from products.models import Product
 
-RECEIPT = "приход"
-ISSUE = "расход"
-OPERATION_TYPE_CHOICES = [
-    (RECEIPT, "Приход"),
-    (ISSUE, "Расход"),
-]
+
+class OperationType(models.TextChoices):
+    """Допустимые направления движения товара."""
+
+    RECEIPT = "приход", "Приход"
+    ISSUE = "расход", "Расход"
+
+
+class OperationStatus(models.TextChoices):
+    """Состояние записи складской операции."""
+
+    ACTIVE = "active", "Активна"
+    CANCELLED = "cancelled", "Отменена"
+
+
+RECEIPT = OperationType.RECEIPT
+ISSUE = OperationType.ISSUE
+OPERATION_TYPE_CHOICES = OperationType.choices
 
 
 class Operation(models.Model):
@@ -23,6 +35,8 @@ class Operation(models.Model):
     ``related_name="operations"`` — обратный доступ ``product.operations.all()``.
     """
 
+    Status = OperationStatus
+
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
@@ -30,7 +44,7 @@ class Operation(models.Model):
         verbose_name="Товар",
     )
     operation_type = models.CharField(
-        "Тип операции", max_length=10, choices=OPERATION_TYPE_CHOICES
+        "Тип операции", max_length=10, choices=OperationType.choices
     )
     quantity = models.PositiveIntegerField("Количество")
     operation_date = models.DateField("Дата операции")
@@ -47,6 +61,11 @@ class Operation(models.Model):
                 name="operation_quantity_positive",
             ),
         ]
+
+    @property
+    def status(self) -> OperationStatus:
+        """Текстовый статус, вычисляемый из существующего флага отмены."""
+        return OperationStatus.CANCELLED if self.is_cancelled else OperationStatus.ACTIVE
 
     def __str__(self) -> str:
         action = self.get_operation_type_display()
