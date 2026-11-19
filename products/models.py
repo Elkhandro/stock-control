@@ -37,6 +37,8 @@ class Product(models.Model):
     name = models.CharField("Название", max_length=200)
     article = models.CharField("Артикул", max_length=50, unique=True)
     category = models.CharField("Категория", max_length=100)
+    supplier = models.ForeignKey("suppliers.Supplier", on_delete=models.SET_NULL, null=True, blank=True, related_name="products", verbose_name="Поставщик")
+    image = models.ImageField("Изображение", upload_to="products/", blank=True, null=True)
     unit = models.CharField("Единица измерения", max_length=20, default="шт.")
     price = models.DecimalField(
         "Цена за единицу", max_digits=12, decimal_places=2, default=Decimal("0.00")
