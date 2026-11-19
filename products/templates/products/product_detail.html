@@ -19,13 +19,14 @@
     </div>
     <div class="card-body">
         {% if product.image %}<div class="mb-3"><img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 280px"></div>{% endif %}
-        <a href="{% url 'products:product_edit' product.pk %}" class="btn btn-outline-primary btn-sm mb-3">Редактировать товар</a>
+        {% if product.pk %}<a href="{% url 'products:product_edit' product.pk %}" class="btn btn-outline-primary btn-sm mb-3">Редактировать товар</a>{% endif %}
         <div class="row">
             <div class="col-md-6">
                 <table class="table table-borderless">
                     <tr><th width="40%">ID:</th><td>{{ product.id }}</td></tr>
                     <tr><th>Артикул:</th><td><code>{{ product.article }}</code></td></tr>
                     <tr><th>Категория:</th><td>{{ product.category|default:"—" }}</td></tr>
+                    {% if product.supplier %}<tr><th>Поставщик:</th><td>{{ product.supplier.name }}</td></tr>{% endif %}
                     <tr><th>Единица:</th><td>{{ product.unit }}</td></tr>
                 </table>
             </div>
