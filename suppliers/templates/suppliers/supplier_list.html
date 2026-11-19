@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Поставщики — Складской учёт{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Поставщики</h1>
+    <a class="btn btn-primary" href="{% url 'suppliers:supplier_create' %}">Добавить поставщика</a>
+</div>
+<div class="row g-3">
+{% for supplier in suppliers %}
+<div class="col-md-6 col-lg-4"><div class="card h-100">
+    {% if supplier.image %}<img src="{{ supplier.image.url }}" class="card-img-top" alt="{{ supplier.name }}" style="max-height:180px;object-fit:contain">{% endif %}
+    <div class="card-body">
+        <h5>{{ supplier.name }}</h5>
+        <p class="mb-1">{{ supplier.contact_person }}</p>
+        <p class="mb-1">{{ supplier.phone }}</p>
+        <p class="mb-2">{{ supplier.email }}</p>
+        <p class="small text-muted">Товаров связано: {{ supplier.products.count }}</p>
+        <a href="{% url 'suppliers:supplier_edit' supplier.pk %}" class="btn btn-sm btn-outline-primary">Изменить</a>
+        <form method="post" action="{% url 'suppliers:supplier_deactivate' supplier.pk %}" class="d-inline">
+            {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger">Деактивировать</button>
+        </form>
+    </div>
+</div></div>
+{% empty %}<p>Активных поставщиков пока нет.</p>{% endfor %}
+</div>
+{% endblock %}
