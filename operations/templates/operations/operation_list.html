@@ -81,11 +81,13 @@
                 <td>{{ operation.comment|default:"—" }}</td>
                 <td>{% include "operations/includes/operation_status.html" %}</td>
                 <td>
+                    {% if operation.status == "active" %}
                     <a class="btn btn-sm btn-outline-primary" href="{% url 'operations:operation_edit' operation.id %}">Изменить</a>
                     <form method="post" action="{% url 'operations:operation_cancel' operation.id %}" class="d-inline">
                         {% csrf_token %}
                         <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Отменить операцию и восстановить остаток?')">Отменить</button>
                     </form>
+                    {% else %}—{% endif %}
                 </td>
             </tr>
             {% empty %}
