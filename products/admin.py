@@ -18,13 +18,13 @@ class OperationInline(admin.TabularInline):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
-        "name", "article", "category", "price", "stock",
+        "name", "article", "category", "supplier", "price", "stock",
         "total_value", "active_operations_count", "site_link",
     )
     list_display_links = ("name", "article")
     list_editable = ("stock",)
-    search_fields = ("name", "article")
-    list_filter = ("category",)
+    search_fields = ("name", "article", "supplier__name")
+    list_filter = ("category", "supplier")
     list_per_page = 25
     ordering = ("name",)
     readonly_fields = ("total_value",)
