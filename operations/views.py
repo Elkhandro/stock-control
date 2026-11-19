@@ -1,13 +1,11 @@
 """View-функции приложения operations (складские операции)."""
 
-from datetime import date, datetime
+from datetime import date
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.db.models import F
-
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
@@ -171,7 +169,7 @@ def _is_int(value: str) -> bool:
 
 def operation_list(request) -> HttpResponse:
     """[ORM] Фильтрация операций через GET-форму, сортировка и пагинация."""
-    form = OperationFilterForm(request.GET or None)
+    form = OperationFilterForm(request.GET or None, initial={"status": "active", "sort": "date"})
     status = "active"
     sort = "date"
     operations = Operation.objects.active()
