@@ -49,6 +49,13 @@
         </table>
     </div>
 </div>
+{% if operation.status == "active" %}
+<a href="{% url 'operations:operation_edit' operation.pk %}" class="btn btn-primary">Редактировать</a>
+<form method="post" action="{% url 'operations:operation_cancel' operation.pk %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger">Отменить операцию</button>
+</form>
+{% endif %}
 <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-primary">
     ← К списку операций
 </a>
