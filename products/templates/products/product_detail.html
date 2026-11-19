@@ -18,6 +18,8 @@
         <h2 class="mb-0">{{ product.name }}</h2>
     </div>
     <div class="card-body">
+        {% if product.image %}<div class="mb-3"><img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 280px"></div>{% endif %}
+        <a href="{% url 'products:product_edit' product.pk %}" class="btn btn-outline-primary btn-sm mb-3">Редактировать товар</a>
         <div class="row">
             <div class="col-md-6">
                 <table class="table table-borderless">
