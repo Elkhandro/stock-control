@@ -29,8 +29,8 @@
         {% for error in form.product.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-2">
-        {{ form.operation_type.label_tag }}{{ form.operation_type }}
-        {% for error in form.operation_type.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        {{ form.type.label_tag }}{{ form.type }}
+        {% for error in form.type.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-2">
         {{ form.status.label_tag }}{{ form.status }}
