@@ -10,6 +10,9 @@ urlpatterns = [
     # SQLite-версии (основные для ПР7)
     path("", views.operation_list, name="operation_list"),
     path("statistics/", views.operation_statistics, name="operation_statistics"),
+    path("new/", views.operation_create, name="operation_create"),
+    path("<int:pk>/edit/", views.operation_edit, name="operation_edit"),
+    path("<int:pk>/cancel/", views.operation_cancel, name="operation_cancel"),
     path("<int:pk>/", views.operation_detail, name="operation_detail"),
 
     # Формы прихода/расхода (работают через JSON, запись в БД не требуется по ПР7)

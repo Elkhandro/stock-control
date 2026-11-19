@@ -1,17 +1,22 @@
 """View-функции приложения operations (складские операции)."""
 
-from datetime import date, datetime
+from datetime import date
 
+from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, F, Q, Sum
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.http import HttpResponse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
+
+from operations.forms import OperationFilterForm, OperationForm
 
 from storage import load_products, load_operations, save_operations, save_products
 from models.operation import RECEIPT, ISSUE
 from services.operation_service import create_operation
-from operations.models import OPERATION_TYPE_CHOICES, Operation, OperationStatus
+from operations.models import OPERATION_TYPE_CHOICES, Operation, OperationStatus, OperationType
 from products.models import Product
 
 
@@ -163,69 +168,124 @@ def _is_int(value: str) -> bool:
 
 
 def operation_list(request) -> HttpResponse:
-    """[ORM] История операций: фильтры, сортировка, пагинация."""
-    error = ""
-    operation_date = request.GET.get("date", "").strip()
-    selected_product = request.GET.get("product", "").strip()
-    selected_type = request.GET.get("type", "").strip()
-    status = request.GET.get("status", "active")
-    sort = request.GET.get("sort", "date")
+    """[ORM] Фильтрация операций через GET-форму, сортировка и пагинация."""
+    form = OperationFilterForm(request.GET or None, initial={"status": "active", "sort": "date"})
+    status = "active"
+    sort = "date"
+    operations = Operation.objects.active()
 
-    if status not in STATUS_FILTERS:
-        status = "active"
-    if sort not in OPERATION_SORT_FIELDS:
-        sort = "date"
+    if form.is_bound and form.is_valid():
+        data = form.cleaned_data
+        status = data.get("status") or "active"
+        sort = data.get("sort") or "date"
+        if status == "cancelled":
+            operations = Operation.objects.cancelled()
+        elif status == "completed":
+            operations = Operation.objects.completed()
+        elif status == "all":
+            operations = Operation.objects.all()
+        if data.get("date"):
+            operations = operations.for_date(data["date"])
+        if data.get("product"):
+            operations = operations.filter(product=data["product"])
+        if data.get("type"):
+            operations = operations.filter(operation_type=data["type"])
 
-    base_operations = Operation.objects.all()
-    status_value = STATUS_FILTERS[status]
-    if status_value is not None:
-        base_operations = base_operations.filter(status=status_value)
+    operations = operations.annotate(
+        product_name=F("product__name"),
+        product_slug=F("product__slug"),
+        article=F("product__article"),
+        unit=F("product__unit"),
+    ).values(
+        "id", "product_id", "product_name", "product_slug", "article", "unit",
+        "operation_type", "quantity", "operation_date", "comment", "status",
+    ).order_by(*OPERATION_SORT_FIELDS.get(sort, OPERATION_SORT_FIELDS["date"]))
 
-    if operation_date:
-        try:
-            selected_date = datetime.strptime(operation_date, "%Y-%m-%d").date()
-        except ValueError:
-            error = "Укажите корректную дату."
-        else:
-            base_operations = base_operations.for_date(selected_date)
-
-    operations_data = (
-        base_operations
-        .annotate(
-            product_name=F("product__name"),
-            product_slug=F("product__slug"),
-            article=F("product__article"),
-            unit=F("product__unit"),
-        )
-        .values(
-            "id", "product_id", "product_name", "product_slug", "article", "unit",
-            "operation_type", "quantity", "operation_date", "comment", "status",
-        )
-    )
-
-    if _is_int(selected_product):
-        operations_data = operations_data.filter(product_id=int(selected_product))
-
-    if selected_type in dict(OPERATION_TYPE_CHOICES):
-        operations_data = operations_data.filter(operation_type=selected_type)
-
-    operations_data = operations_data.order_by(*OPERATION_SORT_FIELDS[sort])
-
-    paginator = Paginator(operations_data, PAGE_SIZE)
-    page_obj = paginator.get_page(request.GET.get("page"))  # «abc» -> 1-я страница
-
+    paginator = Paginator(operations, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page"))
     return render(request, "operations/operation_list.html", {
         "operations": page_obj,
         "page_obj": page_obj,
-        "operation_date": operation_date,
-        "selected_product": selected_product,
-        "selected_type": selected_type,
+        "form": form,
         "status": status,
+        "error": form.errors.get("date", [""])[0] if form.errors.get("date") else "",
         "sort": sort,
-        "products": Product.objects.order_by("name"),
-        "operation_types": OPERATION_TYPE_CHOICES,
-        "error": error,
     })
+
+
+def _apply_stock_change(product_id, operation_type, quantity, reverse=False):
+    """Применить или компенсировать влияние операции на остаток товара."""
+    receipt_increases = operation_type == OperationType.RECEIPT
+    increase = not receipt_increases if reverse else receipt_increases
+    queryset = Product.objects.filter(pk=product_id)
+    if increase:
+        queryset.update(stock=F("stock") + quantity)
+    else:
+        updated = queryset.filter(stock__gte=quantity).update(stock=F("stock") - quantity)
+        if not updated:
+            raise ValidationError("Недостаточно товара на складе для выполнения операции.")
+
+
+@require_http_methods(["GET", "POST"])
+def operation_create(request):
+    """Создание ORM-операции с атомарным изменением остатка."""
+    form = OperationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                operation = form.save(commit=False)
+                operation.status = OperationStatus.ACTIVE
+                operation.save()
+                _apply_stock_change(operation.product_id, operation.operation_type, operation.quantity)
+        except ValidationError as exc:
+            form.add_error(None, exc.messages[0])
+        else:
+            messages.success(request, "Складская операция создана, остаток обновлён.")
+            return redirect("operations:operation_detail", pk=operation.pk)
+    return render(request, "operations/operation_form_django.html", {
+        "form": form, "object": None, "title": "Новая складская операция",
+    })
+
+
+@require_http_methods(["GET", "POST"])
+def operation_edit(request, pk):
+    """Редактирование активной операции с откатом старого и применением нового движения."""
+    operation = get_object_or_404(
+        Operation.objects.select_related("product"),
+        pk=pk, status=OperationStatus.ACTIVE,
+    )
+    original_product_id = operation.product_id
+    original_operation_type = operation.operation_type
+    original_quantity = operation.quantity
+    form = OperationForm(request.POST or None, instance=operation)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                _apply_stock_change(original_product_id, original_operation_type, original_quantity, reverse=True)
+                updated_operation = form.save(commit=False)
+                updated_operation.status = OperationStatus.ACTIVE
+                updated_operation.save()
+                _apply_stock_change(updated_operation.product_id, updated_operation.operation_type, updated_operation.quantity)
+        except ValidationError as exc:
+            form.add_error(None, exc.messages[0])
+        else:
+            messages.success(request, "Операция изменена, остаток пересчитан.")
+            return redirect("operations:operation_detail", pk=operation.pk)
+    return render(request, "operations/operation_form_django.html", {
+        "form": form, "object": operation, "title": "Редактирование операции",
+    })
+
+
+@require_POST
+def operation_cancel(request, pk):
+    """Отмена активной операции через POST с компенсацией изменения остатка."""
+    operation = get_object_or_404(Operation, pk=pk, status=OperationStatus.ACTIVE)
+    with transaction.atomic():
+        _apply_stock_change(operation.product_id, operation.operation_type, operation.quantity, reverse=True)
+        operation.status = OperationStatus.CANCELLED
+        operation.save(update_fields=["status"])
+    messages.success(request, "Операция отменена, остаток восстановлен.")
+    return redirect("operations:operation_list")
 
 
 def operation_detail(request, pk: int) -> HttpResponse:

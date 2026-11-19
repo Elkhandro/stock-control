@@ -1,9 +1,12 @@
 """View-функции приложения products (товары)."""
 
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.http import require_http_methods
+
+from products.forms import ProductForm
 
 from storage import load_products, save_products
 from services.product_service import (
@@ -192,3 +195,30 @@ def product_search(request) -> HttpResponse:
     })
 
 
+
+
+@require_http_methods(["GET", "POST"])
+def product_create(request):
+    """Создание товара с загрузкой изображения."""
+    form = ProductForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        product = form.save()
+        messages.success(request, "Товар добавлен.")
+        return redirect(product.get_absolute_url())
+    return render(request, "products/product_form.html", {
+        "form": form, "object": None, "title": "Новый товар",
+    })
+
+
+@require_http_methods(["GET", "POST"])
+def product_edit(request, pk):
+    """Редактирование товара; при необходимости можно заменить изображение."""
+    product = get_object_or_404(Product, pk=pk)
+    form = ProductForm(request.POST or None, request.FILES or None, instance=product)
+    if request.method == "POST" and form.is_valid():
+        product = form.save()
+        messages.success(request, "Изменения товара сохранены.")
+        return redirect(product.get_absolute_url())
+    return render(request, "products/product_form.html", {
+        "form": form, "object": product, "title": "Редактирование товара",
+    })

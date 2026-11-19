@@ -9,7 +9,8 @@
         <a href="{% url 'operations:operation_statistics' %}" class="btn btn-outline-primary">
             📊 Статистика
         </a>
-        <a href="{% url 'operations:operation_receive' %}" class="btn btn-success">
+        <a href="{% url 'operations:operation_create' %}" class="btn btn-success">➕ Новая операция</a>
+        <a href="{% url 'operations:operation_receive' %}" class="btn btn-outline-success">
             📥 Приход
         </a>
         <a href="{% url 'operations:operation_ship' %}" class="btn btn-warning">
@@ -20,48 +21,28 @@
 
 <form method="get" action="{% url 'operations:operation_list' %}" class="row g-2 mb-3">
     <div class="col-md-2">
-        <label class="form-label small mb-0" for="f-date">Дата</label>
-        <input type="date" id="f-date" name="date" class="form-control" value="{{ operation_date }}">
+        {{ form.date.label_tag }}{{ form.date }}
+        {% for error in form.date.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-3">
-        <label class="form-label small mb-0" for="f-product">Товар</label>
-        <select id="f-product" name="product" class="form-select">
-            <option value="">Все товары</option>
-            {% for product in products %}
-            <option value="{{ product.pk }}" {% if selected_product == product.pk|stringformat:"s" %}selected{% endif %}>{{ product.name }}</option>
-            {% endfor %}
-        </select>
+        {{ form.product.label_tag }}{{ form.product }}
+        {% for error in form.product.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-2">
-        <label class="form-label small mb-0" for="f-type">Тип</label>
-        <select id="f-type" name="type" class="form-select">
-            <option value="">Любой</option>
-            {% for value, label in operation_types %}
-            <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
+        {{ form.type.label_tag }}{{ form.type }}
+        {% for error in form.type.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-2">
-        <label class="form-label small mb-0" for="f-status">Статус</label>
-        <select id="f-status" name="status" class="form-select">
-            <option value="active" {% if status == "active" %}selected{% endif %}>Активные</option>
-            <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Отменённые</option>
-            <option value="completed" {% if status == "completed" %}selected{% endif %}>Завершённые</option>
-            <option value="all" {% if status == "all" %}selected{% endif %}>Все</option>
-        </select>
+        {{ form.status.label_tag }}{{ form.status }}
+        {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-md-3">
-        <label class="form-label small mb-0" for="f-sort">Сортировка</label>
-        <select id="f-sort" name="sort" class="form-select">
-            <option value="date" {% if sort == "date" %}selected{% endif %}>По дате (новые сверху)</option>
-            <option value="date_asc" {% if sort == "date_asc" %}selected{% endif %}>По дате (старые сверху)</option>
-            <option value="product" {% if sort == "product" %}selected{% endif %}>По товару</option>
-            <option value="type" {% if sort == "type" %}selected{% endif %}>По типу операции</option>
-        </select>
+        {{ form.sort.label_tag }}{{ form.sort }}
+        {% for error in form.sort.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
     </div>
     <div class="col-12 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Найти</button>
-        <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-secondary">Сбросить</a>
+        <button type="submit" class="btn btn-primary">Применить</button>
+        <a href="{% url 'operations:operation_list' %}" class="btn btn-outline-secondary">Сбросить фильтры</a>
     </div>
 </form>
 
@@ -78,6 +59,7 @@
                 <th>Дата</th>
                 <th>Комментарий</th>
                 <th>Статус</th>
+                <th>Действия</th>
             </tr>
         </thead>
         <tbody>
@@ -98,10 +80,19 @@
                 <td>{{ operation.operation_date|date:"d.m.Y" }}</td>
                 <td>{{ operation.comment|default:"—" }}</td>
                 <td>{% include "operations/includes/operation_status.html" %}</td>
+                <td>
+                    {% if operation.status == "active" %}
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'operations:operation_edit' operation.id %}">Изменить</a>
+                    <form method="post" action="{% url 'operations:operation_cancel' operation.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Отменить операцию и восстановить остаток?')">Отменить</button>
+                    </form>
+                    {% else %}—{% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" class="text-center text-muted py-4">
+                <td colspan="8" class="text-center text-muted py-4">
                     Операций по заданным условиям нет.
                 </td>
             </tr>
