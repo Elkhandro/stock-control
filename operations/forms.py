@@ -55,7 +55,9 @@ class OperationForm(forms.ModelForm):
     def clean_operation_date(self):
         operation_date = self.cleaned_data["operation_date"]
         if operation_date < timezone.localdate():
-            raise forms.ValidationError("Нельзя указать дату операции в прошлом.")
+            original_date = self.instance.operation_date if self.instance.pk else None
+            if operation_date != original_date:
+                raise forms.ValidationError("Нельзя указать дату новой операции в прошлом.")
         return operation_date
 
     def clean(self):
