@@ -188,8 +188,8 @@ def operation_list(request) -> HttpResponse:
             operations = operations.for_date(data["date"])
         if data.get("product"):
             operations = operations.filter(product=data["product"])
-        if data.get("operation_type"):
-            operations = operations.filter(operation_type=data["operation_type"])
+        if data.get("type"):
+            operations = operations.filter(operation_type=data["type"])
 
     operations = operations.annotate(
         product_name=F("product__name"),
@@ -208,6 +208,7 @@ def operation_list(request) -> HttpResponse:
         "page_obj": page_obj,
         "form": form,
         "status": status,
+        "error": form.errors.get("date", [""])[0] if form.errors.get("date") else "",
         "sort": sort,
     })
 
@@ -253,11 +254,14 @@ def operation_edit(request, pk):
         Operation.objects.select_related("product"),
         pk=pk, status=OperationStatus.ACTIVE,
     )
+    original_product_id = operation.product_id
+    original_operation_type = operation.operation_type
+    original_quantity = operation.quantity
     form = OperationForm(request.POST or None, instance=operation)
     if request.method == "POST" and form.is_valid():
         try:
             with transaction.atomic():
-                _apply_stock_change(operation.product_id, operation.operation_type, operation.quantity, reverse=True)
+                _apply_stock_change(original_product_id, original_operation_type, original_quantity, reverse=True)
                 updated_operation = form.save(commit=False)
                 updated_operation.status = OperationStatus.ACTIVE
                 updated_operation.save()
