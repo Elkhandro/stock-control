@@ -34,7 +34,10 @@
           <a class="nav-link" href="{% url 'products:product_search' %}">🔍 Поиск</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'products:product_add' %}">+ Товар</a>
+          <a class="nav-link" href="{% url 'products:product_create' %}">+ Товар</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'suppliers:supplier_list' %}">Поставщики</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'operations:operation_list' %}">Операции</a>
@@ -43,7 +46,10 @@
           <a class="nav-link" href="{% url 'operations:operation_statistics' %}">📊 Статистика</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'operations:operation_receive' %}">📥 Приход</a>
+          <a class="nav-link" href="{% url 'operations:operation_create' %}">+ Операция</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'operations:operation_receive' %}">📥 Приход (JSON)</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="{% url 'operations:operation_ship' %}">📤 Расход</a>
