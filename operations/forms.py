@@ -15,7 +15,7 @@ class OperationFilterForm(forms.Form):
         empty_label="Все товары",
         widget=forms.Select(attrs={"class": "form-select"}),
     )
-    operation_type = forms.ChoiceField(
+    type = forms.ChoiceField(
         required=False, label="Тип операции",
         choices=[("", "Любой тип"), *OperationType.choices],
         widget=forms.Select(attrs={"class": "form-select"}),
