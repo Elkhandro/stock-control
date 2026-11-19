@@ -21,4 +21,6 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["supplier"].queryset = self.fields["supplier"].queryset.filter(is_active=True)
+        if self.instance.pk and self.instance.supplier_id:
+            self.fields["supplier"].queryset = self.fields["supplier"].queryset | self.fields["supplier"].queryset.model.objects.filter(pk=self.instance.supplier_id)
         self.fields["supplier"].required = False
