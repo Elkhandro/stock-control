@@ -8,6 +8,7 @@ from products.models import Product
 class OperationFilterForm(forms.Form):
     date = forms.DateField(
         required=False, label="Дата",
+        error_messages={"invalid": "Укажите корректную дату."},
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
     )
     product = forms.ModelChoiceField(
