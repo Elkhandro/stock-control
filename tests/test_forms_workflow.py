@@ -1,5 +1,4 @@
-import struct
-import zlib
+import base64
 from datetime import timedelta
 from decimal import Decimal
 
@@ -103,15 +102,8 @@ class DjangoFormsWorkflowTests(TestCase):
         self.assertEqual(self.client.get(reverse("suppliers:supplier_edit", args=[999999])).status_code, 404)
 
     def test_product_image_upload_and_edit(self):
-        def chunk(kind, data):
-            return (struct.pack(">I", len(data)) + kind + data
-                    + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF))
-
-        png = (b"\\x89PNG\\r\\n\\x1a\\n"
-               + chunk(b"IHDR", struct.pack(">2I5B", 1, 1, 8, 2, 0, 0, 0))
-               + chunk(b"IDAT", zlib.compress(b"\\x00\\xff\\x00\\x00"))
-               + chunk(b"IEND", b""))
-        upload = SimpleUploadedFile("item.png", png, content_type="image/png")
+        gif = base64.b64decode("R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=")
+        upload = SimpleUploadedFile("item.gif", gif, content_type="image/gif")
         response = self.client.post(reverse("products:product_create"), {
             "name": "Фото товар", "article": "PHOTO-001", "category": "Тест",
             "supplier": self.supplier.pk, "unit": "шт.", "price": "12.50", "stock": "2",
